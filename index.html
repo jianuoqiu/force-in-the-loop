@@ -1,0 +1,891 @@
+<title>Force in the Loop</title>
+<meta name="description" content="Project page draft: transferring human contact force to robot manipulation, with the method figures rebuilt as interactive diagrams.">
+
+<style>
+/* ── palette: the deck's own colours, on a white academic sheet ─────── */
+:root{
+  --bg:#ffffff;
+  --text:#4a4a4a;
+  --head:#363636;
+  --soft:#7a7a7a;
+  --rule:#ededed;
+  --rule2:#dbdbdb;
+  --navy:#1f3864;      /* box outlines and arrows, as in the slides   */
+  --blue:#bdd7ee;      /* robot policy labels                         */
+  --blue-ink:#2e75b6;
+  --green:#e2f0d9;     /* raw human data                              */
+  --green-ink:#4ea72e;
+  --red:#c00000;       /* the one loud colour — the high-rate loop     */
+  --later:#6b4ea8;     /* later work, kept visually separate */
+  --grey:#fafafa;
+  --sans:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Georgia,"Times New Roman",Times,serif;
+  --mono:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.container{max-width:1000px; margin:0 auto; padding:0 24px}
+.container.wide{max-width:1180px}
+.narrow{max-width:760px; margin:0 auto}
+section{padding:46px 0}
+#method,#labels{padding:58px 0}
+section + section{border-top:1px solid var(--rule)}
+
+h1,h2,h3{color:var(--head); font-weight:600; margin:0}
+h2{font-size:28px; text-align:center; letter-spacing:-.01em; margin-bottom:26px}
+h3{font-size:18px; margin:30px 0 8px}
+p{margin:0 0 16px}
+p:last-child{margin-bottom:0}
+a{color:var(--head)}
+em{font-style:italic}
+strong{color:var(--head); font-weight:600}
+
+/* ── hero ───────────────────────────────────────────────────────────── */
+.hero{text-align:center; padding:76px 0 52px; border-top:0}
+.hero h1{
+  font-size:clamp(30px,4.6vw,44px); line-height:1.18; font-weight:600;
+  letter-spacing:-.015em; max-width:900px; margin:0 auto 14px; text-wrap:balance;
+}
+.hero .tag{font-size:17px; color:var(--soft); margin:0 auto 30px; text-wrap:balance}
+
+/* ── prose ──────────────────────────────────────────────────────────── */
+.just{text-align:justify; hyphens:auto}
+.lead{font-size:17px; margin:0 0 18px}
+.eq-lead{text-align:center; margin:24px 0 6px}
+.eq{text-align:center; font-size:19px; color:var(--head); margin:0}
+.key{text-align:center; font-size:14px; color:var(--soft); margin:30px 0 0}
+.intro{text-align:center; max-width:74ch; margin:0 auto 30px; color:var(--text)}
+.todo{color:var(--soft); font-style:italic; font-size:14.5px; margin-top:22px}
+.hyp{font-size:16.5px; margin:34px 0 0; padding:20px 24px;
+     background:#fbfaf7; border:1px solid var(--rule2); border-left:3px solid var(--red);
+     border-radius:9px}
+ol.steps{margin:0; padding-left:22px}
+ol.steps li{margin-bottom:9px; padding-left:4px}
+ol.steps li::marker{color:var(--soft); font-variant-numeric:tabular-nums}
+ol.steps b{color:var(--head); font-weight:600}
+.ext-h{color:var(--later); font-size:17px; margin:34px 0 12px}
+.ext{border-left:2px solid var(--later); padding-left:20px}
+.ext p{margin:0 0 15px}
+.ext p:last-child{margin-bottom:0}
+.ext b{color:var(--later); font-weight:600}
+.ref{font-size:14px; color:var(--soft); text-align:left; margin:0 0 10px}
+.ref.cite{font-size:13px; line-height:1.55}
+figure{margin:0}
+
+/* maths set in serif italic, as in the slides */
+.m{font-family:var(--serif); font-style:italic; letter-spacing:.01em}
+.m sup,.m sub{font-size:.66em; font-style:italic; line-height:0}
+.m sub{margin-left:-.22em}
+code{font-family:var(--mono); font-size:.87em; background:var(--grey);
+     border:1px solid var(--rule); border-radius:3px; padding:1px 5px; color:var(--head)}
+
+/* ── structure switcher ─────────────────────────────────────────────── */
+.switch{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:0 0 16px}
+.switch button{
+  display:inline-flex; align-items:center; gap:11px;
+  font-family:var(--sans); font-size:16.5px; font-weight:500; color:var(--head);
+  background:#fff; border:1.5px solid var(--rule2); border-radius:11px;
+  padding:12px 22px; cursor:pointer;
+  transition:background .13s, color .13s, border-color .13s;
+}
+.switch button .n{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:25px; height:25px; border-radius:7px; flex:none;
+  font-size:13px; font-weight:700; background:var(--rule); color:var(--soft);
+}
+.switch button:hover{border-color:#9aa3ad}
+.switch button[aria-pressed="true"]{background:var(--head); border-color:var(--head); color:#fff}
+.switch button[aria-pressed="true"] .n{background:rgba(255,255,255,.24); color:#fff}
+.switch button:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+
+.claim{
+  position:relative; text-align:center; font-size:16px; color:var(--head);
+  max-width:64ch; margin:0 auto 28px; padding:15px 24px; min-height:1.6em;
+  background:var(--grey); border:1px solid var(--rule2); border-radius:11px;
+}
+.claim::before{
+  content:""; position:absolute; top:-7px; left:var(--caret,50%);
+  transform:translateX(-50%) rotate(45deg);
+  width:12px; height:12px; background:var(--grey);
+  border-left:1px solid var(--rule2); border-top:1px solid var(--rule2);
+}
+
+/* ── the interactive figure ─────────────────────────────────────────── */
+.stage-wrap{overflow-x:auto; padding:4px 0 8px}
+.stage{position:relative; width:max-content; min-width:100%; margin:0 auto}
+.stage svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none}
+.stage svg .hit{pointer-events:stroke; stroke-width:20; stroke:transparent; fill:none; cursor:pointer}
+.stage svg .hit:focus{outline:none}
+.grid-layer{display:grid; position:relative; z-index:2;
+            column-gap:54px; row-gap:26px; align-items:stretch;
+            justify-content:center; padding:0 28px}
+
+.node{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; padding:11px 13px; min-height:62px; text-align:center;
+  background:#fff; color:var(--head);
+  border:1.5px solid var(--navy); border-radius:9px;
+  font:inherit; font-size:15px; line-height:1.3; cursor:pointer;
+  transition:opacity .15s, box-shadow .15s, border-color .15s;
+}
+.node .sub{font-size:12.5px; color:var(--soft)}
+.node[data-fill="blue"]{background:var(--blue)}
+.node[data-fill="green"]{background:var(--green)}
+.node[data-dashed="1"]{border-style:dashed}
+.node:hover,.node:focus-visible{box-shadow:0 0 0 3px rgba(31,56,100,.16); outline:none}
+.node[data-state="dim"]{opacity:.3}
+.node[data-state="on"]{border-color:var(--red); box-shadow:0 0 0 3px rgba(192,0,0,.13)}
+
+/* group captions, as coloured text on the slides */
+.gcap{display:flex; align-items:center; justify-content:center;
+      font-size:15px; font-weight:700; text-align:center; line-height:1.25}
+.gcap[data-c="blue"]{color:var(--blue-ink)}
+.gcap[data-c="green"]{color:var(--green-ink)}
+.gcap[data-c="red"]{color:var(--red)}
+.gcap.note{position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
+           background:#fff; padding:0 6px; font-size:13.5px}
+
+.lab-layer{position:absolute; inset:0; z-index:3; pointer-events:none}
+.lab{
+  position:absolute; transform:translate(-50%,-50%);
+  font-family:var(--serif); font-style:italic; font-size:15px;
+  padding:0 5px; white-space:nowrap; background:#fff; color:var(--head);
+  transition:opacity .15s,color .15s;
+}
+.lab sup,.lab sub{font-size:.64em; line-height:0}
+.lab sub{margin-left:-.22em}
+.lab.plain{font-family:var(--sans); font-style:normal; font-size:13.5px; color:var(--head)}
+.lab[data-state="dim"]{opacity:.22}
+.lab[data-state="on"]{color:var(--red)}
+
+/* ── the readout, styled as a figure caption ────────────────────────── */
+.readout{
+  border:1px solid var(--rule2); border-radius:9px; background:var(--grey);
+  padding:20px 24px; margin-top:14px; min-height:136px;
+}
+.readout .idle{color:var(--soft); font-size:15.5px; margin:0; text-align:center; padding:26px 0}
+.readout .idle b{color:var(--head); font-weight:600}
+.ro-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:10px}
+.ro-head h3{margin:0; font-size:17px}
+.ro-sig{font-family:var(--serif); font-style:italic; font-size:15px; color:var(--red); margin:0}
+.ro-sig sup,.ro-sig sub{font-size:.64em; line-height:0}
+.ro-sig sub{margin-left:-.22em}
+.ro-body{columns:2; column-gap:34px; font-size:14.5px}
+@media (max-width:720px){.ro-body{columns:1}}
+.ro-field{break-inside:avoid; margin:0 0 11px}
+.ro-field b{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+            color:var(--soft); font-weight:600; margin-bottom:1px}
+.ro-field[data-kind="hard"] b{color:var(--red)}
+.ro-field[data-kind="later"] b{color:var(--later)}
+.ro-field[data-kind="later"]{color:var(--later)}
+.pinned{font-size:12.5px; color:var(--soft); margin:10px 0 0}
+
+figcaption{font-size:14px; color:var(--soft); text-align:center; margin-top:16px}
+figcaption b{color:var(--head)}
+
+ul.plain{margin:0; padding-left:20px}
+ul.plain li{margin-bottom:7px}
+
+footer{padding:32px 0 60px; border-top:1px solid var(--rule);
+       font-size:13.5px; color:var(--soft)}
+footer a{color:var(--soft)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+
+<section class="hero">
+  <div class="container">
+    <h1>Transferring Human Contact Force to Dexterous Robot Manipulation</h1>
+    <p class="tag">Force from demonstration, tracked in the loop.</p>
+    <div class="narrow">
+      <p class="lead">Human demonstrations carry motion and force together. Retargeting can recover the
+      geometry well: we can tell which fingertips touched the object and where. What geometry cannot tell us
+      is how hard. Put the robot's fingers in exactly the positions the human used and the force that actually
+      drives the contact is still unconstrained, so the same motion can succeed or fail.</p>
+      <p class="lead">So we take two targets from every demonstration. The <strong>kinematic target</strong>
+      says roughly where the fingers should be. The <strong>force target</strong> is the one that decides the
+      outcome: the robot should reproduce the force profile the human produced on the same task. Reaching it
+      needs a robot-side controller, sitting above the built-in one, that tracks the force we recorded.</p>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <div class="container wide">
+    <h2>Where does force enter the pipeline?</h2>
+    <p class="intro">Three candidate structures. They share the demonstrations, the retargeting, the policy
+    backbone and the evaluation, and differ only in where the force is allowed to act.</p>
+
+    <div class="switch" role="group" aria-label="Structure" data-fig="execution"></div>
+    <p class="claim" data-claim="execution"></p>
+
+    <figure>
+      <div class="stage-wrap">
+        <div class="stage" data-stage="execution">
+          <svg role="img" aria-label="Block diagram of the robot execution stack: policy, refinement layer, low-level joint controller and robot, with feedback paths that differ per structure."></svg>
+          <div class="grid-layer"></div>
+          <div class="lab-layer"></div>
+        </div>
+      </div>
+      <div class="readout" data-readout="execution" aria-live="polite"></div>
+    </figure>
+
+    <div class="narrow">
+      <p class="hyp"><strong>Hypothesis.</strong> Structure 3 is the one we expect to matter. Keeping force as
+      an explicit target, and giving the robot a controller that tracks it, should produce a learned model that
+      is compatible with force rather than only with position. That is what we think allows a dexterous skill
+      to move from a human hand to a robot one.</p>
+    </div>
+  </div>
+</section>
+
+<section id="labels">
+  <div class="container wide">
+    <h2>From human demonstration to robot labels</h2>
+    <p class="intro">Both label streams come from the same recording. The glove gives the contact set and,
+    after calibration, the contact force. The hand pose gives the retargeted robot state, with the contact set
+    acting as the retargeting target.</p>
+
+    <div class="switch" role="group" aria-label="Label pipeline" data-fig="labels"></div>
+    <p class="claim" data-claim="labels"></p>
+
+    <figure>
+      <div class="stage-wrap">
+        <div class="stage" data-stage="labels">
+          <svg role="img" aria-label="Data flow from human glove tactile maps and hand kinematics, through contact detection, pressure to force calibration and contact-point retargeting, into robot policy labels."></svg>
+          <div class="grid-layer"></div>
+          <div class="lab-layer"></div>
+        </div>
+      </div>
+      <div class="readout" data-readout="labels" aria-live="polite"></div>
+    </figure>
+
+    <div class="narrow">
+      <p class="eq-lead">Structures 2 and 3 give the policy</p>
+      <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+n</sub>,&thinsp; F<sup>tar</sup><sub>t:t+n</sub>)</span></p>
+      <p class="eq-lead">and structure 3 adds the controller</p>
+      <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
+      <p class="key"><span class="m">q</span> robot kinematic state &nbsp;·&nbsp;
+        <span class="m">F</span> fingertip contact force &nbsp;·&nbsp;
+        <span class="m">t…</span> the several steps after <span class="m">t</span>, up to <span class="m">N</span>,
+        on the controller's faster clock</p>
+    </div>
+  </div>
+</section>
+
+<section id="eval">
+  <div class="container"><div class="narrow">
+    <h2>Evaluation</h2>
+    <p>Tasks where the pose alone is not enough:</p>
+    <ul class="plain">
+      <li>compliant pressing and dispensing</li>
+      <li>holding an object under changing load</li>
+      <li>recovering from a disturbance</li>
+    </ul>
+    <p><strong>Metrics.</strong> Force error, overshoot, contact loss, recovery time, task success, robustness
+    to a change of stiffness, load or geometry.</p>
+    <p><strong>Ablations.</strong> Force as policy input, force as policy output, offline against online force
+    use, closed-loop feedback, controller rate, contact gating, and the residual
+    <span class="m">F<sup>tar</sup> − F</span> against raw force.</p>
+  </div></div>
+</section>
+
+<section id="plan">
+  <div class="container"><div class="narrow">
+    <h2>Milestones</h2>
+    <ol class="steps">
+      <li><b>Replay on hardware.</b> Take one recorded trajectory, position and force together, and replay it
+      on the real robot until the task actually succeeds. This is the check that the whole data flow holds:
+      glove pressure to force, hand pose to contact points, targets to controller.</li>
+      <li><b>A policy in the loop.</b> The same stack driven by a learned policy in real time, on an easy task
+      first, with non-zero success. At this stage closing the loop at rate matters more than the number.</li>
+      <li><b>The full comparison.</b> All three structures implemented and all tasks run. This is the main
+      experiment, and where the hypothesis is either supported or it is not.</li>
+    </ol>
+
+    <h3 class="ext-h">Extensions</h3>
+    <div class="ext">
+      <p><b>Reinforcement learning.</b> Rebuild the setup in simulation and learn the middle layer instead of
+      tuning it by hand. The work is getting force, or precise tactile, out of the simulator faithfully. Isaac
+      Lab should make that tractable.</p>
+      <p><b>Two hands.</b> Everything above assumes a single hand. Bringing in the second one changes the
+      problem rather than doubling it, and we expect it to be a challenge on its own.</p>
+      <p><b>A latent tactile target instead of force.</b> Builds on the RL extension. Force is only the
+      simplest thing a contact target can be. Acting on a target means knowing which direction increases it,
+      something like a Jacobian. With explicit force that direction is available. With an abstract tactile
+      latent it is not, because there is no easy way to say how moving a finger changes the latent. RL never
+      needs that direction written down, so it can learn on the latent directly.</p>
+      <p><b>Deployment without tactile sensors.</b> Most robot hands do not have them. A compliant controller
+      offers a substitute: a persistent gap between the commanded target and the measured state means something
+      is pushing back, which is a fake tactile signal we can read force from. If it holds, force-aware
+      manipulation stops requiring force sensors and the method carries over to hands that have none. We think
+      this is the strongest of the four.</p>
+    </div>
+    <p class="todo">Tasks, hardware, videos and preliminary results: TODO.</p>
+  </div></div>
+</section>
+
+<footer>
+  <div class="container"><div class="narrow">
+    <p class="ref">Structure 1 is close to what Contact-Grounded Policy does, but it learns from teleoperation
+    rather than from human demonstrations. As far as we know nobody has taken this from human data yet.</p>
+    <p class="ref cite">[1] Xu, Z., Wang, Y., Abbatematteo, B., Preechayasomboon, J., Chan, S., Colonnese, N.,
+    and Memar, A. H. Contact-Grounded Policy: Dexterous Visuotactile Policy with Generative Contact Grounding.
+    arXiv:2603.05687, 2026.</p>
+  </div></div>
+</footer>
+
+<script>
+"use strict";
+
+/* ── data ───────────────────────────────────────────────────────────── */
+const FIGS = {
+execution:{
+  colw:"172px 118px 180px 180px 124px", gap:"58px", padBottom:96,
+  variants:[
+    {id:"offline", n:"1", label:"Offline",
+     claim:"Force only shapes the training labels. Nothing measures it during execution."},
+    {id:"feedforward", n:"2", label:"Feedforward",
+     claim:"The policy predicts force, but the layer acting on it never sees the force it produced."},
+    {id:"closedloop", n:"3", label:"Closed-loop",
+     claim:"A fast controller compares the force target against measured force and corrects on the error."}
+  ],
+  caps:[
+    {id:"cap-labels", c:1, r:1, text:"Labels", color:"blue", v:["feedforward","closedloop"]},
+    {id:"cap-labels-b1", c:1, r:5, text:"Labels", color:"blue", v:["offline"]}
+  ],
+  notes:[
+    {id:"n-loop", text:"High-rate refinement loop", color:"red", lane:2, dy:-14, xfrac:.63, v:["closedloop"]}
+  ],
+  nodes:[
+    {id:"labels-q", c:1,r:2, dashedBy:{offline:1}, fillBy:{feedforward:"blue",closedloop:"blue"},
+     nm:"Retargeted Robot States", v:["offline","feedforward","closedloop"],
+     d:{what:"A per-timestep robot hand configuration. Only the contact points recorded in the human data are used as the retargeting target.",
+        how:"Optimization-based or geometry-based retargeting. We already have both.",
+        hard:"Retargeting could become the bottleneck, so we assume it is close to perfect and do not build the project on it. Even perfect retargeting only matches geometry. It says nothing about the force that will actually be applied, which is the reason for everything to the right of this box."}},
+    {id:"labels-F", c:1,r:3, dashedBy:{offline:1}, fillBy:{feedforward:"blue",closedloop:"blue"},
+     nm:"Contact Force Recordings", v:["offline","feedforward","closedloop"],
+     d:{what:"Per-fingertip contact force at each active contact, for every timestep.",
+        how:"The glove reports pressure, not force, so a calibration module converts one into the other. It can be learned, taken from an existing model, or derived from the sensor physics.",
+        hard:"Making that calibration trustworthy. In the worst case a careful bench calibration and a linear fit already give a usable pressure to force map, so we treat this as solvable rather than open."}},
+    {id:"pseudo-action", c:1,r:4, fill:"blue", nm:"Pseudo Robot Action", v:["offline"],
+     d:{what:"The only label structure 1 trains on.",
+        how:"The kinematic state, displaced by the force recordings through the spring model. Imitation learning then runs unchanged.",
+        hard:"After this box force has left the system. Whatever the spring model got wrong is baked into the labels."}},
+    {id:"policy", c:2,r:2, rs:2, nm:"policy", v:["offline","feedforward","closedloop"],
+     dBy:{
+       offline:{what:"Predicts the refined robot action and nothing else. Force never reaches it."},
+       feedforward:{what:"Predicts a kinematic target and a force target.",
+        hard:"Nothing downstream ever tells it whether the force target was met."},
+       closedloop:{what:"Predicts a kinematic target and a force target, slowly. The layer below runs much faster.",
+        how:"It could take the residual F<sup>tar</sup> − F instead of raw force, which would show it directly what the robot cannot deliver."}}},
+    {id:"refine", c:3,r:2, rs:2, nm:"Refinement Layer", v:["feedforward","closedloop"],
+     nmBy:{feedforward:"Open-loop Refinement Layer", closedloop:"Middle-level Layer"},
+     dBy:{
+       feedforward:{what:"Turns the predicted kinematic and force targets into a joint command.",
+        hard:"It applies the correction without ever observing the force that resulted, so nothing tells it whether the correction was right. That is the sense in which it is open-loop."},
+       closedloop:{what:"A fast controller that tracks measured force against the target, sitting above the built-in controller.",
+        how:"Two options. A learning-free PID on the force error, which we want running first. Or RL, which we treat as later work.",
+        hard:"Contact gating so it does not push before contact, a deadband against tactile noise, and bounds on the target.",
+        later:"With a contact or tactile latent the target need not be force at all. RL could learn to reach a target latent directly, and force becomes the simplest case of it."}}},
+    {id:"pd", c:4,r:2, rs:2, nm:"Low-level PD joint controller", v:["offline","feedforward","closedloop"],
+     d:{what:"The controller built into the robot. Standard, and identical in all three structures."}},
+    {id:"robot", c:5,r:2, rs:2, nm:"Robot", v:["offline","feedforward","closedloop"],
+     d:{what:"Arm and hand. The tasks are finger-level dexterous manipulation, not pick and place, so free-space approach motion is not where we put our attention."},
+     dBy:{
+       offline:{what:"Arm and hand. The tasks are finger-level dexterous manipulation, not pick and place, so free-space approach motion is not where we put our attention.",
+        feedback:"Joint poses for proprioception, and object-centric point clouds for object pose. No tactile sensing at deployment."},
+       feedforward:{what:"Arm and hand. The tasks are finger-level dexterous manipulation, not pick and place, so free-space approach motion is not where we put our attention.",
+        feedback:"The same, plus real-time tactile. It passes through the same pressure to force calibration used on the glove, so the readings sit in the same space as the training targets."},
+       closedloop:{what:"Arm and hand. The tasks are finger-level dexterous manipulation, not pick and place, so free-space approach motion is not where we put our attention.",
+        feedback:"The same, plus real-time tactile. It passes through the same pressure to force calibration used on the glove, so the readings sit in the same space as the training targets."}}}
+  ],
+  edges:[
+    {id:"e-sup-pseudo", from:"pseudo-action",fs:"right", to:"policy",ts:"bottom", sig:"sup", dash:1, v:["offline"],
+     d:{what:"Imitation learning on the pseudo actions."}},
+    {id:"e-sup-q", from:"labels-q",fs:"right", to:"policy",ts:"left", to_:-14, sig:"sup", dash:1, v:["feedforward","closedloop"],
+     d:{what:"Supervises the kinematic head."}},
+    {id:"e-sup-F", from:"labels-F",fs:"right", to:"policy",ts:"left", to_:14, sig:"sup", dash:1, v:["feedforward","closedloop"],
+     d:{what:"Supervises the force head. This is what makes the policy predict interaction, not just motion."}},
+    {id:"e-off-refine", from:"labels-F",fs:"bottom", to:"pseudo-action",ts:"top", v:["offline"],
+     lab:"Refinement", plain:1, labDx:64,
+     d:{what:"Force is folded into the kinematic state offline, producing one action label.",
+        how:"Borrowed from Contact-Grounded Policy. The hand controller is modeled as a spring with a tuned coefficient k, so a target force converts back into a joint displacement.",
+        hard:"One conversion, done once, with a fixed k. It cannot react to stiffness, load or grasp state at run time."}},
+
+    {id:"e-policy-pd", from:"policy",fs:"right", to:"pd",ts:"left", v:["offline"],
+     lab:"q<sup>tar</sup><sub>t+n</sub>",
+     d:{what:"Joint targets straight to the controller.",
+        hard:"The column this arrow crosses is empty. That gap is what structures 2 and 3 fill."}},
+    {id:"e-policy-refine-q", from:"policy",fs:"right", to:"refine",ts:"left", fo:-16, to_:-16, v:["feedforward","closedloop"],
+     labBy:{feedforward:"q<sup>tar</sup><sub>t+n</sub>", closedloop:"q<sup>tar</sup><sub>t:t+n</sub>"},
+     d:{what:"The kinematic target. Roughly where the fingers should be."}},
+    {id:"e-policy-refine-F", from:"policy",fs:"right", to:"refine",ts:"left", fo:16, to_:16, v:["feedforward","closedloop"],
+     labBy:{feedforward:"F<sup>tar</sup><sub>t+n</sub>", closedloop:"F<sup>tar</sup><sub>t:t+n</sub>"},
+     d:{what:"The force target. The profile the human produced on the same task, and the thing that decides the outcome."}},
+    {id:"e-refine-pd", from:"refine",fs:"right", to:"pd",ts:"left", v:["feedforward","closedloop"],
+     lab:"q′<sup>tar</sup><sub>t…</sub>",
+     d:{what:"The corrected joint command."}},
+    {id:"e-pd-robot", from:"pd",fs:"right", to:"robot",ts:"left", v:["offline","feedforward","closedloop"],
+     d:{what:"Joint commands to the hardware."}},
+
+    {id:"e-robot-pd", from:"robot",fs:"bottom", to:"pd",ts:"bottom", lane:0, labFrac:.5, v:["offline","feedforward","closedloop"],
+     labBy:{offline:"q<sup>reading</sup><sub>…</sub>", feedforward:"q<sup>reading</sup><sub>t…</sub>", closedloop:"q<sup>reading</sup><sub>t…</sub>"},
+     d:{what:"The built-in position loop. Identical in all three structures."}},
+    {id:"e-robot-refine", from:"robot",fs:"bottom", to:"refine",ts:"bottom", lane:1, hot:1, labFrac:.86, v:["closedloop"],
+     lab:"F<sup>reading</sup><sub>t…</sub>, q<sup>reading</sup><sub>t…</sub>",
+     d:{what:"Measured contact force and joint state, back into the middle layer at high rate.",
+        how:"The tactile reading passes through the same pressure to force calibration used on the glove, so it can be compared with the target directly.",
+        hard:"This arrow is the whole difference between structures 2 and 3. Structure 2 knows the force target. Only this path lets the system know the force error."}},
+    {id:"e-robot-policy", from:"robot",fs:"bottom", to:"policy",ts:"bottom", lane:2, labFrac:.86, v:["offline","feedforward","closedloop"],
+     labBy:{offline:"q<sup>reading</sup><sub>t</sub>",
+            feedforward:"F<sup>reading</sup><sub>t</sub>, q<sup>reading</sup><sub>t</sub>",
+            closedloop:"F<sup>reading</sup><sub>t−1</sub>, q<sup>reading</sup><sub>t−1</sub>"},
+     d:{what:"Observation feedback to the policy."},
+     dBy:{closedloop:{what:"Observation feedback to the policy.",
+       how:"Stamped t−1 here while the middle layer reads t…, which is the figure showing that the two loops run at different rates."}}}
+  ]
+},
+
+labels:{
+  colw:"162px 184px 192px 192px", padBottom:16,
+  variants:[
+    {id:"shared", n:"2·3", label:"Shared pipeline",
+     claim:"Force stays an explicit target. Two supervision streams, no offline conversion."},
+    {id:"offline", n:"1", label:"Offline pipeline",
+     claim:"Force and kinematics collapse into a single action label before training."}
+  ],
+  caps:[
+    {id:"cap-human", c:3, r:1, text:"Human Data", color:"green", v:["shared","offline"]},
+    {id:"cap-out", c:3, r:3, text:"Robot Policy Labels", color:"blue", v:["shared"]},
+    {id:"cap-out-off", c:2, r:6, text:"Robot Policy Labels", color:"blue", v:["offline"]}
+  ],
+  nodes:[
+    {id:"glove", c:2,r:1, fill:"green", nm:"Glove Tactile Maps", v:["shared","offline"],
+     d:{what:"Raw pressure maps from the tactile glove, one per timestep.",
+        hard:"Pressure, not force. Everything downstream depends on converting it."}},
+    {id:"kinpos", c:4,r:1, fill:"green", nm:"Kinematic Positions", v:["shared","offline"],
+     d:{what:"The human hand pose across the demonstration."}},
+    {id:"t2f", c:1,r:2, nm:"Tactile-to-Force Model", v:["shared","offline"],
+     d:{what:"Converts glove pressure into physical force.",
+        how:"Learned, taken from an existing model, or derived from the sensor physics.",
+        hard:"In the worst case a careful bench calibration and a linear fit are enough, so we treat this as solvable rather than open."}},
+    {id:"contacts", c:2,r:2, nm:"# Contact Points", sub:"e.g. {2, 3, 4}", v:["shared","offline"],
+     d:{what:"Which fingertips are in contact at each step.",
+        how:"Segmented from the tactile map.",
+        hard:"It does double duty. It selects which forces count, and it is the target the retargeting has to hit."}},
+    {id:"retarget", c:4,r:2, nm:"Kinematic Retargeting", v:["shared","offline"],
+     d:{what:"Maps the human hand onto the robot hand, using the recorded contact points as the target.",
+        how:"Optimization-based or geometry-based. We have both.",
+        hard:"Could be the bottleneck, so we assume it is close to perfect. Even then it only matches geometry, never force."}},
+    {id:"forcerec", c:2,r:3, fillBy:{shared:"blue"}, nm:"Contact Force Recordings", sub:"(shared)", v:["shared","offline"],
+     d:{what:"Per-fingertip contact force at each active contact.",
+        how:"The contact set selects which forces are kept as targets.",
+        hard:"A first-class label in the shared pipeline. In structure 1 it is consumed and disappears."}},
+    {id:"states", c:4,r:3, fillBy:{shared:"blue"}, nm:"Robot Kinematic States", v:["shared","offline"],
+     d:{what:"A per-timestep robot hand configuration.",
+        hard:"A first-class label in the shared pipeline. In structure 1 it is consumed by the conversion below."}},
+    {id:"heuristic", c:3,r:4, nm:"Heuristic Action Refinement", v:["offline"],
+     d:{what:"Folds force into the kinematic state to make one action label.",
+        how:"The hand controller is modeled as a spring with a tuned coefficient k, from Contact-Grounded Policy, so force converts back into displacement.",
+        hard:"Offline and one-time, with a fixed k. This is the point where force stops being separately representable."}},
+    {id:"pseudo", c:3,r:5, fill:"blue", nm:"Estimated Robot Action", v:["offline"],
+     d:{what:"The single label structure 1 trains on.",
+        hard:"Force never appears again after this."}}
+  ],
+  edges:[
+    {id:"e-glove-contacts", from:"glove",fs:"bottom", to:"contacts",ts:"top", v:["shared","offline"],
+     d:{what:"Segment the tactile map into a contact set."}},
+    {id:"e-glove-t2f", from:"glove",fs:"left", to:"t2f",ts:"top", v:["shared","offline"],
+     d:{what:"Raw pressure into the calibration."}},
+    {id:"e-t2f-force", from:"t2f",fs:"bottom", to:"forcerec",ts:"left", v:["shared","offline"],
+     d:{what:"Calibrated force out."}},
+    {id:"e-contacts-force", from:"contacts",fs:"bottom", to:"forcerec",ts:"top", v:["shared","offline"],
+     d:{what:"The contact set says which forces are meaningful."}},
+    {id:"e-contacts-retarget", from:"contacts",fs:"right", to:"retarget",ts:"left", v:["shared","offline"],
+     lab:"Contact Points as Targets", plain:1,
+     d:{what:"The recorded contact points become the retargeting target.",
+        hard:"The only arrow crossing between the two branches, and the thing that makes the retargeting contact-based rather than pose-matching."}},
+    {id:"e-kinpos-retarget", from:"kinpos",fs:"bottom", to:"retarget",ts:"top", v:["shared","offline"],
+     d:{what:"Human hand pose into retargeting."}},
+    {id:"e-retarget-states", from:"retarget",fs:"bottom", to:"states",ts:"top", v:["shared","offline"],
+     d:{what:"Robot-compatible kinematic targets out."}},
+    {id:"e-force-heur", from:"forcerec",fs:"bottom", to:"heuristic",ts:"left", v:["offline"],
+     d:{what:"Force into the offline conversion."}},
+    {id:"e-states-heur", from:"states",fs:"bottom", to:"heuristic",ts:"right", v:["offline"],
+     d:{what:"Kinematics into the offline conversion."}},
+    {id:"e-heur-pseudo", from:"heuristic",fs:"bottom", to:"pseudo",ts:"top", v:["offline"],
+     d:{what:"One merged action label out."}}
+  ]
+}
+};
+
+const FIELDS = [["what","What it is"],["how","How"],["hard","The hard part"],
+                ["feedback","Feedback we need"],["later","Later"]];
+const DIRS = {left:{x:-1,y:0}, right:{x:1,y:0}, top:{x:0,y:-1}, bottom:{x:0,y:1}};
+
+function roundPath(pts, r){
+  if (pts.length < 3) return "M" + pts.map(p => p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" L");
+  let d = "M" + pts[0].x.toFixed(1) + " " + pts[0].y.toFixed(1);
+  for (let i = 1; i < pts.length - 1; i++){
+    const p = pts[i], a = pts[i-1], b = pts[i+1];
+    const d1 = Math.hypot(p.x-a.x, p.y-a.y), d2 = Math.hypot(b.x-p.x, b.y-p.y);
+    const rr = Math.min(r, d1/2, d2/2);
+    if (rr < 1.5){ d += " L" + p.x.toFixed(1) + " " + p.y.toFixed(1); continue; }
+    const u1 = {x:(p.x-a.x)/(d1||1), y:(p.y-a.y)/(d1||1)};
+    const u2 = {x:(b.x-p.x)/(d2||1), y:(b.y-p.y)/(d2||1)};
+    d += " L" + (p.x-u1.x*rr).toFixed(1) + " " + (p.y-u1.y*rr).toFixed(1);
+    d += " Q" + p.x.toFixed(1) + " " + p.y.toFixed(1) + " " +
+         (p.x+u2.x*rr).toFixed(1) + " " + (p.y+u2.y*rr).toFixed(1);
+  }
+  const l = pts[pts.length-1];
+  return d + " L" + l.x.toFixed(1) + " " + l.y.toFixed(1);
+}
+
+function anchor(rect, side, off){
+  off = off || 0;
+  const cx = rect.x + rect.w/2, cy = rect.y + rect.h/2;
+  if (side === "left")  return {x:rect.x,          y:cy + off};
+  if (side === "right") return {x:rect.x + rect.w, y:cy + off};
+  if (side === "top")   return {x:cx + off,        y:rect.y};
+  return                       {x:cx + off,        y:rect.y + rect.h};
+}
+
+function route(p0, d0, p1, d1, viaY, stub){
+  const span = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  const s = viaY != null ? (stub || 20)
+                         : Math.max(4, Math.min(stub || 20, span / 2 - 4));
+  const a = {x:p0.x + d0.x*s, y:p0.y + d0.y*s};
+  const b = {x:p1.x + d1.x*s, y:p1.y + d1.y*s};
+  const pts = [p0, a];
+  if (viaY != null){
+    pts.push({x:a.x, y:viaY}, {x:b.x, y:viaY});
+  } else if (d0.x !== 0 && d1.x !== 0){
+    if (Math.abs(a.y - b.y) >= 1.5){ const mx = (a.x + b.x)/2; pts.push({x:mx, y:a.y}, {x:mx, y:b.y}); }
+  } else if (d0.y !== 0 && d1.y !== 0){
+    if (Math.abs(a.x - b.x) >= 1.5){ const my = (a.y + b.y)/2; pts.push({x:a.x, y:my}, {x:b.x, y:my}); }
+  } else if (d0.x !== 0){
+    pts.push({x:b.x, y:a.y});
+  } else {
+    pts.push({x:a.x, y:b.y});
+  }
+  pts.push(b, p1);
+  return pts.filter((p,i,arr) => i === 0 || Math.hypot(p.x-arr[i-1].x, p.y-arr[i-1].y) > 0.5);
+}
+
+/* ── figure controller ──────────────────────────────────────────────── */
+function buildFigure(key){
+  const fig = FIGS[key];
+  const stage    = document.querySelector('[data-stage="'+key+'"]');
+  const svg      = stage.querySelector("svg");
+  const gridEl   = stage.querySelector(".grid-layer");
+  const labEl    = stage.querySelector(".lab-layer");
+  const readout  = document.querySelector('[data-readout="'+key+'"]');
+  const switcher = document.querySelector('.switch[data-fig="'+key+'"]');
+  const claimEl  = document.querySelector('[data-claim="'+key+'"]');
+
+  let variant = fig.variants[0].id;
+  let active = null, pinned = null;
+  const nodeEls = new Map(), edgeEls = new Map(), labEls = new Map(), capEls = new Map(), noteEls = new Map();
+
+  readout.id = key + "-readout";
+
+  fig.variants.forEach(v => {
+    const b = document.createElement("button");
+    b.innerHTML = (v.n ? '<span class="n">' + v.n + '</span>' : '') + v.label;
+    b.setAttribute("aria-pressed", String(v.id === variant));
+    b.onclick = () => { variant = v.id; pinned = null; active = null; render(); };
+    switcher.appendChild(b);
+  });
+
+  gridEl.style.gridTemplateColumns = fig.colw;
+  if (fig.gap) gridEl.style.columnGap = fig.gap;
+
+  (fig.notes || []).forEach(nt => {
+    const el = document.createElement("div");
+    el.className = "gcap note";
+    el.dataset.c = nt.color;
+    el.textContent = nt.text;
+    labEl.appendChild(el);
+    noteEls.set(nt.id, el);
+  });
+
+  (fig.caps || []).forEach(c => {
+    const el = document.createElement("div");
+    el.className = "gcap";
+    el.dataset.c = c.color;
+    el.style.gridColumn = c.cs ? (c.c + " / span " + c.cs) : c.c;
+    el.style.gridRow = c.r;
+    el.textContent = c.text;
+    gridEl.appendChild(el);
+    capEls.set(c.id, el);
+  });
+
+  fig.nodes.forEach(n => {
+    const el = document.createElement("button");
+    el.className = "node";
+    el.style.gridColumn = n.c;
+    el.style.gridRow = n.rs ? (n.r + " / span " + n.rs) : n.r;
+    el.setAttribute("aria-describedby", key + "-readout");
+    el.onmouseenter = () => { if (!pinned){ active = n.id; paint(); } };
+    el.onmouseleave = () => { if (!pinned){ active = null; paint(); } };
+    el.onfocus = () => { if (!pinned){ active = n.id; paint(); } };
+    el.onblur  = () => { if (!pinned){ active = null; paint(); } };
+    el.onclick = () => { pinned = (pinned === n.id) ? null : n.id; active = pinned; paint(); };
+    gridEl.appendChild(el);
+    nodeEls.set(n.id, el);
+  });
+
+  fig.edges.forEach(e => {
+    const NSU = "http://www.w3.org/2000/svg";
+    const g = document.createElementNS(NSU, "g");
+    const path = document.createElementNS(NSU, "path");
+    const head = document.createElementNS(NSU, "polygon");
+    const hit  = document.createElementNS(NSU, "path");
+    hit.setAttribute("class", "hit");
+    hit.setAttribute("tabindex", "0");
+    hit.setAttribute("role", "button");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("stroke-linecap", "round");
+    g.append(path, head, hit);
+    hit.onmouseenter = () => { if (!pinned){ active = e.id; paint(); } };
+    hit.onmouseleave = () => { if (!pinned){ active = null; paint(); } };
+    hit.onfocus = () => { if (!pinned){ active = e.id; paint(); } };
+    hit.onblur  = () => { if (!pinned){ active = null; paint(); } };
+    hit.onclick = () => { pinned = (pinned === e.id) ? null : e.id; active = pinned; paint(); };
+    hit.onkeydown = ev => {
+      if (ev.key === "Enter" || ev.key === " "){
+        ev.preventDefault();
+        pinned = (pinned === e.id) ? null : e.id; active = pinned; paint();
+      }
+    };
+    svg.appendChild(g);
+    edgeEls.set(e.id, {g, path, head, hit});
+    const l = document.createElement("div");
+    l.className = "lab" + (e.plain ? " plain" : "");
+    labEl.appendChild(l);
+    labEls.set(e.id, l);
+  });
+
+  const visNodes = () => fig.nodes.filter(n => n.v.includes(variant));
+  const visEdges = () => fig.edges.filter(e => e.v.includes(variant));
+  const nameOf = id => { const o = fig.nodes.find(x => x.id === id);
+                         return (o.nmBy && o.nmBy[variant]) || o.nm; };
+
+  function render(){
+    switcher.querySelectorAll("button").forEach((b,i) =>
+      b.setAttribute("aria-pressed", String(fig.variants[i].id === variant)));
+    claimEl.innerHTML = fig.variants.find(v => v.id === variant).claim;
+    aimCaret();
+
+    (fig.caps || []).forEach(c => { capEls.get(c.id).style.display = c.v.includes(variant) ? "" : "none"; });
+    (fig.notes || []).forEach(nt => { noteEls.get(nt.id).style.display = nt.v.includes(variant) ? "" : "none"; });
+
+    fig.nodes.forEach(n => {
+      const el = nodeEls.get(n.id);
+      const on = n.v.includes(variant);
+      el.style.display = on ? "" : "none";
+      if (!on) return;
+      el.dataset.fill = (n.fillBy && n.fillBy[variant]) || n.fill || "";
+      el.dataset.dashed = String((n.dashedBy && n.dashedBy[variant]) || n.dashed || "");
+      el.innerHTML = '<span class="nm">' + ((n.nmBy && n.nmBy[variant]) || n.nm) + '</span>' +
+                     (n.sub ? '<span class="sub">' + n.sub + '</span>' : '');
+    });
+
+    fig.edges.forEach(e => {
+      const on = e.v.includes(variant);
+      const parts = edgeEls.get(e.id);
+      parts.g.style.display = on ? "" : "none";
+      labEls.get(e.id).style.display = on ? "" : "none";
+      const txt = (e.labBy && e.labBy[variant]) || e.lab;
+      parts.hit.setAttribute("aria-label",
+        nameOf(e.from) + " to " + nameOf(e.to) + (txt ? ", " + txt.replace(/<[^>]+>/g,"") : ""));
+      parts.hit.setAttribute("tabindex", on ? "0" : "-1");
+    });
+    requestAnimationFrame(() => { layout(); paint(); });
+  }
+
+  function aimCaret(){
+    const btn = switcher.querySelector('[aria-pressed="true"]');
+    if (!btn) return;
+    const br = btn.getBoundingClientRect(), cr = claimEl.getBoundingClientRect();
+    const x = Math.min(Math.max(br.left + br.width/2 - cr.left, 22), cr.width - 22);
+    claimEl.style.setProperty("--caret", x + "px");
+  }
+
+  function layout(){
+    stage.style.height = "auto";
+    const gr = gridEl.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+
+    const rects = new Map();
+    visNodes().forEach(n => {
+      const r = nodeEls.get(n.id).getBoundingClientRect();
+      rects.set(n.id, {x:r.left - sr.left, y:r.top - sr.top, w:r.width, h:r.height});
+    });
+
+    let maxLane = -1, chainBottom = 0;
+    visEdges().forEach(e => {
+      if (e.lane == null) return;
+      if (e.lane > maxLane) maxLane = e.lane;
+      [e.from, e.to].forEach(id => {
+        const r = rects.get(id);
+        if (r && r.y + r.h > chainBottom) chainBottom = r.y + r.h;
+      });
+    });
+    const laneBase = chainBottom + 26;
+    const h = maxLane < 0 ? gr.height + fig.padBottom
+                          : Math.max(gr.height + 12, laneBase + maxLane * 26 + 24);
+    stage.style.height = h + "px";
+    svg.setAttribute("viewBox", "0 0 " + Math.round(sr.width) + " " + Math.round(h));
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.style.height = h + "px";
+    visEdges().forEach(e => {
+      const rf = rects.get(e.from), rt = rects.get(e.to);
+      const parts = edgeEls.get(e.id);
+      if (!rf || !rt){ parts.g.style.display = "none"; return; }
+      const p0 = anchor(rf, e.fs, e.fo), p1 = anchor(rt, e.ts, e.to_);
+      const viaY = e.lane != null ? laneBase + e.lane * 26 : null;
+      const pts = route(p0, DIRS[e.fs], p1, DIRS[e.ts], viaY, e.stub);
+      const d = roundPath(pts, 9);
+      parts.path.setAttribute("d", d);
+      parts.hit.setAttribute("d", d);
+
+      const dir = DIRS[e.ts], s = 7;
+      const back = {x:p1.x + dir.x*s*1.9, y:p1.y + dir.y*s*1.9};
+      const perp = {x:-dir.y, y:dir.x};
+      parts.head.setAttribute("points",
+        p1.x+","+p1.y + " " +
+        (back.x+perp.x*s*.6)+","+(back.y+perp.y*s*.6) + " " +
+        (back.x-perp.x*s*.6)+","+(back.y-perp.y*s*.6));
+
+      const segs = [];
+      let total = 0;
+      for (let i = 0; i < pts.length-1; i++){
+        const L = Math.hypot(pts[i+1].x-pts[i].x, pts[i+1].y-pts[i].y);
+        segs.push({a:pts[i], b:pts[i+1], L:L});
+        total += L;
+      }
+
+      let sg = null, t = .5;
+      if (e.lane != null || e.labFrac != null){
+        /* a long routed run: sit on its horizontal stretch, at labFrac along it */
+        let blH = -1;
+        segs.forEach(x => {
+          if (Math.abs(x.b.x-x.a.x) > Math.abs(x.b.y-x.a.y) && x.L > blH){ blH = x.L; sg = x; }
+        });
+        t = e.labFrac != null ? e.labFrac : .5;
+      }
+      if (!sg){
+        /* short hop between two boxes: the halfway point along the whole path,
+           not the longest segment — with equal-length stubs the entry stub wins
+           ties and drops the label inside the box it leaves */
+        let acc = 0;
+        sg = segs[segs.length-1]; t = 1;
+        for (const x of segs){
+          if (acc + x.L >= total/2){ sg = x; t = x.L ? (total/2 - acc) / x.L : .5; break; }
+          acc += x.L;
+        }
+      }
+
+      const lab = labEls.get(e.id);
+      const txt = (e.labBy && e.labBy[variant]) || e.lab;
+      if (txt && sg){
+        lab.innerHTML = txt;
+        const horiz = Math.abs(sg.b.x - sg.a.x) > Math.abs(sg.b.y - sg.a.y);
+        lab.style.left = (sg.a.x + (sg.b.x - sg.a.x) * t + (e.labDx || 0)) + "px";
+        lab.style.top  = (sg.a.y + (sg.b.y - sg.a.y) * t
+                          + (horiz ? -13 : 0) + (e.labDy || 0)) + "px";
+        lab.style.display = "";
+      } else {
+        lab.style.display = "none";
+      }
+    });
+
+    (fig.notes || []).forEach(nt => {
+      const el = noteEls.get(nt.id);
+      if (!nt.v.includes(variant)){ el.style.display = "none"; return; }
+      el.style.display = "";
+      el.style.left = Math.round(sr.width * nt.xfrac) + "px";
+      el.style.top  = Math.round(laneBase + nt.lane * 26 + nt.dy) + "px";
+    });
+  }
+
+  function related(id){
+    const set = new Set([id]);
+    visEdges().forEach(e => {
+      if (e.id === id){ set.add(e.from); set.add(e.to); }
+      else if (e.from === id || e.to === id){ set.add(e.id); set.add(e.from); set.add(e.to); }
+    });
+    return set;
+  }
+
+  function paint(){
+    const cur = active;
+    const rel = cur ? related(cur) : null;
+    visNodes().forEach(n => {
+      nodeEls.get(n.id).dataset.state =
+        !cur ? "" : (n.id === cur ? "on" : (rel.has(n.id) ? "" : "dim"));
+    });
+    visEdges().forEach(e => {
+      const {path, head} = edgeEls.get(e.id);
+      const isOn = e.id === cur;
+      const dim  = cur && !rel.has(e.id);
+      const col = isOn ? "var(--red)" : (e.hot ? "var(--red)" : "var(--navy)");
+      path.setAttribute("stroke", col);
+      path.setAttribute("stroke-width", isOn ? 2.8 : (e.hot ? 2.2 : 1.7));
+      path.setAttribute("stroke-dasharray", e.dash ? "5 4" : "none");
+      path.setAttribute("opacity", dim ? .18 : 1);
+      head.setAttribute("fill", col);
+      head.setAttribute("opacity", dim ? .18 : 1);
+      const lab = labEls.get(e.id);
+      lab.dataset.state = !cur ? "" : (isOn ? "on" : (dim ? "dim" : ""));
+    });
+    writeReadout(cur);
+  }
+
+  function writeReadout(id){
+    if (!id){
+      readout.innerHTML = '<p class="idle"><b>Every box and arrow is live.</b> ' +
+                          'Hover, tap or tab to any of them to read what it does — click to pin.</p>';
+      return;
+    }
+    const n = fig.nodes.find(x => x.id === id);
+    const e = fig.edges.find(x => x.id === id);
+    let title, detail, sig = "";
+    if (n){
+      title = (n.nmBy && n.nmBy[variant]) || n.nm;
+      detail = (n.dBy && n.dBy[variant]) || n.d;
+    } else {
+      title = nameOf(e.from) + " → " + nameOf(e.to);
+      detail = (e.dBy && e.dBy[variant]) || e.d;
+      const txt = (e.labBy && e.labBy[variant]) || e.lab;
+      if (txt && !e.plain) sig = '<p class="ro-sig">' + txt + '</p>';
+    }
+    let html = '<div class="ro-head"><h3>' + title + '</h3>' + sig + '</div><div class="ro-body">';
+    FIELDS.forEach(([k, lbl]) => {
+      if (detail && detail[k]) html += '<p class="ro-field"><b>' + lbl + '</b>' + detail[k] + '</p>';
+    });
+    html += '</div>';
+    if (pinned === id) html += '<p class="pinned">Pinned — click again, or press Esc, to release.</p>';
+    readout.innerHTML = html;
+  }
+
+  document.addEventListener("keydown", ev => {
+    if (ev.key === "Escape" && pinned){ pinned = null; active = null; paint(); }
+  });
+  let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { layout(); paint(); aimCaret(); }, 120); });
+
+  render();
+}
+
+buildFigure("execution");
+buildFigure("labels");
+</script>
