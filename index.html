@@ -271,6 +271,63 @@ footer{padding:32px 0 60px; border-top:1px solid var(--rule);
        font-size:13.5px; color:var(--soft)}
 footer a{color:var(--soft)}
 
+/* ── comparison table ───────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;
+          overscroll-behavior-x:contain; padding-bottom:2px}
+table.cmp{border-collapse:collapse; width:100%; min-width:740px; font-size:14px}
+table.cmp th,table.cmp td{padding:9px 10px; text-align:center;
+                          border-bottom:1px solid var(--rule)}
+table.cmp thead th{
+  font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--soft);
+  font-weight:600; vertical-align:bottom; line-height:1.35; padding-bottom:9px;
+  border-bottom:1.5px solid var(--rule2);
+}
+table.cmp thead th:first-child{text-align:left}
+table.cmp th[scope="row"]{text-align:left; color:var(--head); font-weight:600;
+                          white-space:nowrap}
+table.cmp th[scope="row"] .cn{color:var(--soft); font-weight:400; font-size:12px}
+table.cmp tbody tr:hover{background:var(--grey)}
+table.cmp tbody tr:last-child th,table.cmp tbody tr:last-child td{border-bottom:0}
+table.cmp tr.self{background:#fdf8f8}
+table.cmp tr.self th[scope="row"]{color:var(--red)}
+table.cmp tr.self th,table.cmp tr.self td{border-bottom-color:#f0dada}
+.mk{font-size:15px; line-height:1}
+.mk.y{color:var(--green-ink)}
+.mk.n{color:#ccd0d5}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap}
+.cmp-note{font-size:13.5px; color:var(--soft); text-align:center; margin:14px 0 0}
+.tbl-hint{display:none; font-size:12.5px; color:var(--soft);
+          text-align:center; margin:0 0 10px}
+
+/* ── side navigation ────────────────────────────────────────────────── */
+/* lives in the left gutter, so it never overlaps the 960px column:
+   a dot rail once there is room for it, dots plus labels when wider   */
+.sidenav{display:none; position:fixed; top:50%; transform:translateY(-50%);
+         z-index:50; flex-direction:column; gap:2px}
+.sidenav a{display:flex; align-items:center; gap:10px; padding:3px 0;
+           text-decoration:none; color:var(--soft); font-size:12.5px;
+           line-height:1.2; white-space:nowrap}
+.sidenav .dot{width:7px; height:7px; border-radius:50%; flex:none;
+              background:var(--rule2); transition:background .15s, transform .15s}
+.sidenav .txt{display:none}
+.sidenav a:hover{color:var(--head)}
+.sidenav a:hover .dot{background:var(--soft)}
+.sidenav a[aria-current="true"]{color:var(--red); font-weight:600}
+.sidenav a[aria-current="true"] .dot{background:var(--red); transform:scale(1.4)}
+.sidenav a:focus-visible{outline:2px solid var(--navy); outline-offset:3px; border-radius:3px}
+@media (min-width:1080px){.sidenav{display:flex; left:calc(50% - 530px)}}
+@media (min-width:1320px){
+  .sidenav{left:calc(50% - 650px); width:132px}
+  .sidenav .txt{display:inline}
+}
+@media (max-width:800px){.tbl-hint{display:block}}
+@media print{.sidenav{display:none}}
+
+html{scroll-behavior:smooth}
+section,footer{scroll-margin-top:22px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
 /* ── phones and small tablets ────────────────────────────────────────
@@ -322,7 +379,7 @@ footer a{color:var(--soft)}
 }
 </style>
 
-<section class="hero">
+<section class="hero" id="overview">
   <div class="container">
     <h1>ZeroFACT: Zero-Shot Force-Aware Contact Transfer for Contact-Rich Dexterous Manipulation</h1>
     <p class="tag">Force-aware contact targets, tracked in real time.</p>
@@ -365,6 +422,28 @@ footer a{color:var(--soft)}
     </figure>
 
     <div class="narrow">
+      <p class="eq-lead">Structures 2 and 3 train the policy to predict short-horizon kinematic and force targets</p>
+      <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+N</sub>,&thinsp; F<sup>tar</sup><sub>t:t+N</sub>)</span></p>
+
+      <p class="eq-lead">Structure 2 refines the kinematic target <strong>open-loop</strong>, with the same
+        spring rule structure 1 applies to its labels</p>
+      <p class="eq"><span class="m">q<sup>cmd</sup> = q<sup>tar</sup> + k&thinsp;F<sup>tar</sup></span></p>
+
+      <div class="eq-box">
+        <p class="eq-lead">Structure 3 instead closes the loop with a
+          <span class="f">real-time refinement controller</span></p>
+        <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
+        <p class="eq-note"><strong>Designing this controller is the central challenge of the proposal.</strong>
+          It has to track force at a rate the policy cannot reach, act only once contact is established, and
+          stay stable under tactile noise. Everything else in the pipeline exists to give it a target worth
+          tracking.</p>
+      </div>
+
+      <p class="key">where <span class="m">q</span> is the robot kinematic state,
+        <span class="m">F</span> is the measured fingertip contact force,
+        <span class="m">k</span> is a fixed spring coefficient, and
+        <span class="m">N</span> is the prediction horizon on the controller clock</p>
+
       <p class="hyp"><strong>Hypothesis.</strong> <span class="f">Closed-loop force tracking</span> is necessary
       for reliable <strong>zero-shot transfer</strong> of contact-rich dexterous skills. Keeping force as an
       explicit target, and tracking it with a real-time controller, should produce policies that are compatible
@@ -396,29 +475,6 @@ footer a{color:var(--soft)}
       <div class="readout" data-readout="labels" aria-live="polite"></div>
     </figure>
 
-    <div class="narrow">
-      <p class="eq-lead">Structures 2 and 3 train the policy to predict short-horizon kinematic and force targets</p>
-      <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+N</sub>,&thinsp; F<sup>tar</sup><sub>t:t+N</sub>)</span></p>
-
-      <p class="eq-lead">Structure 2 refines the kinematic target <strong>open-loop</strong>, with the same
-        spring rule structure 1 applies to its labels</p>
-      <p class="eq"><span class="m">q<sup>cmd</sup> = q<sup>tar</sup> + k&thinsp;F<sup>tar</sup></span></p>
-
-      <div class="eq-box">
-        <p class="eq-lead">Structure 3 instead closes the loop with a
-          <span class="f">real-time refinement controller</span></p>
-        <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
-        <p class="eq-note"><strong>Designing this controller is the central challenge of the proposal.</strong>
-          It has to track force at a rate the policy cannot reach, act only once contact is established, and
-          stay stable under tactile noise. Everything else in the pipeline exists to give it a target worth
-          tracking.</p>
-      </div>
-
-      <p class="key">where <span class="m">q</span> is the robot kinematic state,
-        <span class="m">F</span> is the measured fingertip contact force,
-        <span class="m">k</span> is a fixed spring coefficient, and
-        <span class="m">N</span> is the prediction horizon on the controller clock</p>
-    </div>
   </div>
 </section>
 
@@ -435,26 +491,27 @@ footer a{color:var(--soft)}
 <section id="eval">
   <div class="container"><div class="narrow">
     <h2>Evaluation</h2>
-    <p><strong>Metrics.</strong> Policy success rate for learned execution, replay force error for force
-    tracking, and replay success rate for validating the demonstration-to-controller pipeline.</p>
+    <p><strong>Metrics.</strong></p>
+    <ol class="steps">
+      <li><b>Policy success rate</b> for learned execution.</li>
+      <li><b>Replay force error</b> for force tracking.</li>
+      <li><b>Replay success rate</b> for validating the demonstration-to-controller pipeline.</li>
+    </ol>
   </div></div>
 </section>
 
 <section id="contrib">
   <div class="container"><div class="narrow">
-    <h2>Contributions</h2>
+    <h2>Proposed Contributions</h2>
     <ol class="steps">
-      <li><b>A controlled study of where force enters the pipeline.</b> The three structures are compared on the
-      same tasks, data and hardware (and, within each structure, the policy&rsquo;s I/O can be varied as well:
-      whether it takes measured force as input, and whether that input arrives in real time). This is the main
-      contribution.</li>
-      <li><b>The middle-layer force controller, and the infrastructure around it.</b> The <span class="f">real-time
-      refinement layer</span> is a designed component in its own right: force tracking with contact gating, a
-      deadband and target bounds, reused across all task families rather than tuned per task. It also talks back
-      to the policy. If a force target is still not met after a bounded number of correction cycles, the layer
-      signals the policy to replan instead of pushing further.</li>
-      <li><b>A complete robot-learning system, from hardware to algorithms.</b> Glove calibration, retargeting,
-      controller and policies, released as a whole once the study is complete.</li>
+      <li><b>A controlled study of where force enters the imitation learning stack.</b> We compare several
+      force-aware designs and use policy success, force tracking, and replay reliability to reveal how
+      different force designs behave, where they help, and where they fail.</li>
+      <li><b>A reusable force-refinement layer.</b> We design a <span class="f">real-time middle layer</span>
+      that refines position and force targets within the robot&rsquo;s capability, and requests replanning when
+      a target is unreachable.</li>
+      <li><b>A complete robot-learning system.</b> We build the full stack: glove calibration, human-to-robot
+      retargeting, force-aware control, and policy learning.</li>
     </ol>
   </div></div>
 </section>
@@ -495,25 +552,35 @@ footer a{color:var(--soft)}
   </div></div>
 </section>
 
-<footer>
+<section id="related">
   <div class="container"><div class="narrow">
-    <p class="ref"><strong>Contact-Grounded Policy</strong> [1] corresponds to <strong>structure 2</strong>,
-    and learns force-aware behavior from teleoperated robot demonstrations. <strong>ReForce</strong> [2] is the
+    <h2>Comparison with related work</h2>
+    <p class="tbl-hint">Swipe the table sideways to see every column.</p>
+    <div class="tbl-wrap" data-cmp></div>
+  </div></div>
+</section>
+
+<footer id="refs">
+  <div class="container"><div class="narrow">
+    <p class="ref"><strong>Contact-Grounded Policy</strong> [7] corresponds to <strong>structure 2</strong>,
+    and learns force-aware behavior from teleoperated robot demonstrations. <strong>ReForce</strong> [1] is the
     closest to <strong>structure 3</strong>: a residual force tracker, learned in simulation, corrects the
     retargeted action in <span class="f">closed loop</span> from measured fingertip force. Its policy, however,
     sees neither measured force nor an object-centric point cloud, so its tasks run blind.</p>
     <p class="ref">In contrast, this proposal studies force-aware transfer from <strong>human demonstrations</strong>
     across all three structures, with what the policy observes &mdash; measured force, object-centric point
     clouds &mdash; as part of what is varied.</p>
-    <p class="ref cite">[1] Xu, Z., Wang, Y., Abbatematteo, B., Preechayasomboon, J., Chan, S., Colonnese, N.,
-    and Memar, A. H. Contact-Grounded Policy: Dexterous Visuotactile Policy with Generative Contact Grounding.
-    arXiv:2603.05687, 2026.</p>
-    <p class="ref cite">[2] Wu, Y., Zeng, L., Jing, C., Ye, J., and Wang, X. ReForce: Learning Force-aware
-    Retargeting for Dexterous Manipulation. arXiv:2608.15560, 2026.</p>
-    <!-- TODO: comparison table of related force-aware methods (one row per paper: force source, where force
-         enters, policy sees measured force?, closed-loop refinement?, observation, tasks). Wrap it in
-         <div class="tbl-wrap"><table class="cmp">…</table></div> so it scrolls sideways on phones. -->
-    <p class="todo">Comparison table of related force-aware methods: TODO.</p>
+    <p class="ref cite">[1] Wu, Y., Zeng, L., Jing, C., Ye, J., and Wang, X. ReForce: Learning Force-aware Retargeting for Dexterous Manipulation. <a href="https://arxiv.org/abs/2608.15560">arXiv:2608.15560</a>, 2026.</p>
+    <p class="ref cite">[2] Adeniji et al. Feel the Force: Contact-Driven Learning from Humans. <a href="https://arxiv.org/abs/2506.01944">arXiv:2506.01944</a>, 2025.</p>
+    <p class="ref cite">[3] He et al. ForceBand: Learning Forceful Manipulation with sEMG. <a href="https://arxiv.org/abs/2606.26093">arXiv:2606.26093</a>, 2026.</p>
+    <p class="ref cite">[4] Liu et al. ForceMimic: Force-Centric Imitation Learning with Force-Motion Capture System for Contact-Rich Manipulation. <a href="https://arxiv.org/abs/2410.07554">arXiv:2410.07554</a>, 2024.</p>
+    <p class="ref cite">[5] Wi et al. TactAlign: Human-to-Robot Policy Transfer via Tactile Alignment. <a href="https://arxiv.org/abs/2602.13579">arXiv:2602.13579</a>, 2026.</p>
+    <p class="ref cite">[6] Yu et al. MimicTouch: Leveraging Multi-modal Human Tactile Demonstrations for Contact-rich Manipulation. <a href="https://arxiv.org/abs/2310.16917">arXiv:2310.16917</a>, 2023.</p>
+    <p class="ref cite">[7] Xu, Z., Wang, Y., Abbatematteo, B., Preechayasomboon, J., Chan, S., Colonnese, N., and Memar, A. H. Contact-Grounded Policy: Dexterous Visuotactile Policy with Generative Contact Grounding. <a href="https://arxiv.org/abs/2603.05687">arXiv:2603.05687</a>, 2026.</p>
+    <p class="ref cite">[8] Zhang et al. KineDex: Learning Tactile-Informed Visuomotor Policies via Kinesthetic Teaching for Dexterous Manipulation. <a href="https://arxiv.org/abs/2505.01974">arXiv:2505.01974</a>, 2025.</p>
+    <p class="ref cite">[9] Niu, D., et al. T-Rex: Tactile-Reactive Dexterous Manipulation. <a href="https://arxiv.org/abs/2606.17055">arXiv:2606.17055</a>, 2026.</p>
+    <p class="ref cite">[10] Xue, H., Ren, J., Chen, W., Zhang, G., Fang, Y., Gu, G., Xu, H., and Lu, C. Reactive Diffusion Policy: Slow-Fast Visual-Tactile Policy Learning for Contact-Rich Manipulation. <a href="https://arxiv.org/abs/2503.02881">arXiv:2503.02881</a>, 2025.</p>
+    <p class="ref cite">[11] Feng et al. A Minimalist Retargeting-Guided Reinforcement Learning Recipe for Dexterous Manipulation. <a href="https://arxiv.org/abs/2607.11874">arXiv:2607.11874</a>, 2026.</p>
   </div></div>
 </footer>
 
@@ -1141,7 +1208,93 @@ function buildTasks(){
   });
 }
 
+/* ── comparison table ───────────────────────────────────────────────── */
+const CMP = {
+  cols:["Human contact / tactile data","Force / contact target","Dexterous hand",
+        "No simulated training data","Broad contact-rich tasks"],
+  rows:[
+    {n:"ZeroFACT", self:1,      v:[1,1,1,1,1]},
+    {n:"ReForce", cite:"1",             v:[1,1,1,0,0]},
+    {n:"FeelTheForce", cite:"2",        v:[1,1,0,1,0]},
+    {n:"ForceBand", cite:"3",           v:[1,1,0,1,0]},
+    {n:"ForceMimic", cite:"4",          v:[1,1,0,1,0]},
+    {n:"TactAlign", cite:"5",           v:[1,0,1,1,1]},
+    {n:"MimicTouch", cite:"6",          v:[1,0,0,1,0]},
+    {n:"Contact-Grounded Policy", cite:"7", v:[0,1,1,0,1]},
+    {n:"KineDex", cite:"8",             v:[0,1,1,1,1]},
+    {n:"T-Rex", cite:"9",               v:[0,0,1,1,1]},
+    {n:"Reactive Diffusion Policy", cite:"10", v:[0,0,1,1,1]},
+    {n:"ReGrind", cite:"11",            v:[0,0,1,0,1]}
+  ]
+};
+
+function buildTable(){
+  const host = document.querySelector("[data-cmp]");
+  if (!host) return;
+  let h = '<table class="cmp"><thead><tr><th scope="col">Work</th>';
+  CMP.cols.forEach(c => { h += '<th scope="col">' + c + '</th>'; });
+  h += '</tr></thead><tbody>';
+  CMP.rows.forEach(r => {
+    h += '<tr' + (r.self ? ' class="self"' : '') + '><th scope="row">' + r.n +
+         (r.cite ? ' <span class="cn">[' + r.cite + ']</span>' : '') + '</th>';
+    r.v.forEach(v => {
+      h += '<td>' + (v ? '<span class="mk y">\u2713</span><span class="sr">yes</span>'
+                       : '<span class="mk n">\u2717</span><span class="sr">no</span>') + '</td>';
+    });
+    h += '</tr>';
+  });
+  host.innerHTML = h + '</tbody></table>';
+}
+
+/* ── side navigation, with scroll spy ───────────────────────────────── */
+const NAV = [
+  ["overview","Overview"], ["method","Force Integration"], ["labels","Data"],
+  ["tasks","Tasks"], ["eval","Evaluation"], ["contrib","Contributions"],
+  ["plan","Milestones"], ["related","Related work"], ["refs","References"]
+];
+
+function buildNav(){
+  const nav = document.createElement("nav");
+  nav.className = "sidenav";
+  nav.setAttribute("aria-label", "Sections");
+  const links = [];
+  NAV.forEach(([id, label]) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    const a = document.createElement("a");
+    a.href = "#" + id;
+    a.title = label;
+    a.innerHTML = '<span class="dot"></span><span class="txt">' + label + '</span>';
+    nav.appendChild(a);
+    links.push({a:a, target:target});
+  });
+  if (!links.length) return;
+  document.body.appendChild(nav);
+
+  /* cheap enough to run straight off the scroll event: browsers already
+     coalesce passive scroll listeners to one call per frame */
+  function mark(){
+    /* a small fixed line, not a fraction of the viewport: short sections
+       (Evaluation is ~180px) must still be able to claim it */
+    const line = 88;
+    let cur = links[0];
+    links.forEach(l => { if (l.target.getBoundingClientRect().top <= line) cur = l; });
+    /* the last section is often too short to ever cross the line */
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4)
+      cur = links[links.length - 1];
+    links.forEach(l => {
+      if (l === cur) l.a.setAttribute("aria-current", "true");
+      else l.a.removeAttribute("aria-current");
+    });
+  }
+  addEventListener("scroll", mark, {passive:true});
+  addEventListener("resize", mark);
+  mark();
+}
+
 buildFigure("execution");
 buildFigure("labels");
 buildTasks();
+buildTable();
+buildNav();
 </script>
