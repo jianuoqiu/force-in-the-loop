@@ -260,6 +260,13 @@ figcaption b{color:var(--head)}
 ul.plain{margin:0; padding-left:20px}
 ul.plain li{margin-bottom:7px}
 
+/* comparison table (TODO in the footer): scrolls sideways inside its wrapper on phones */
+.tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 14px}
+table.cmp{border-collapse:collapse; width:100%; min-width:640px; font-size:13.5px; line-height:1.4}
+table.cmp th,table.cmp td{padding:7px 10px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:top}
+table.cmp th{color:var(--head); font-weight:600; border-bottom:1px solid var(--rule2)}
+table.cmp td:first-child{color:var(--head); font-weight:600; white-space:nowrap}
+
 footer{padding:32px 0 60px; border-top:1px solid var(--rule);
        font-size:13.5px; color:var(--soft)}
 footer a{color:var(--soft)}
@@ -393,8 +400,12 @@ footer a{color:var(--soft)}
       <p class="eq-lead">Structures 2 and 3 train the policy to predict short-horizon kinematic and force targets</p>
       <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+N</sub>,&thinsp; F<sup>tar</sup><sub>t:t+N</sub>)</span></p>
 
+      <p class="eq-lead">Structure 2 refines the kinematic target <strong>open-loop</strong>, with the same
+        spring rule structure 1 applies to its labels</p>
+      <p class="eq"><span class="m">q<sup>cmd</sup> = q<sup>tar</sup> + k&thinsp;F<sup>tar</sup></span></p>
+
       <div class="eq-box">
-        <p class="eq-lead">Structure 3 additionally uses a
+        <p class="eq-lead">Structure 3 instead closes the loop with a
           <span class="f">real-time refinement controller</span></p>
         <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
         <p class="eq-note"><strong>Designing this controller is the central challenge of the proposal.</strong>
@@ -404,7 +415,8 @@ footer a{color:var(--soft)}
       </div>
 
       <p class="key">where <span class="m">q</span> is the robot kinematic state,
-        <span class="m">F</span> is the measured fingertip contact force, and
+        <span class="m">F</span> is the measured fingertip contact force,
+        <span class="m">k</span> is a fixed spring coefficient, and
         <span class="m">N</span> is the prediction horizon on the controller clock</p>
     </div>
   </div>
@@ -425,6 +437,25 @@ footer a{color:var(--soft)}
     <h2>Evaluation</h2>
     <p><strong>Metrics.</strong> Policy success rate for learned execution, replay force error for force
     tracking, and replay success rate for validating the demonstration-to-controller pipeline.</p>
+  </div></div>
+</section>
+
+<section id="contrib">
+  <div class="container"><div class="narrow">
+    <h2>Contributions</h2>
+    <ol class="steps">
+      <li><b>A controlled study of where force enters the pipeline.</b> The three structures are compared on the
+      same tasks, data and hardware (and, within each structure, the policy&rsquo;s I/O can be varied as well:
+      whether it takes measured force as input, and whether that input arrives in real time). This is the main
+      contribution.</li>
+      <li><b>The middle-layer force controller, and the infrastructure around it.</b> The <span class="f">real-time
+      refinement layer</span> is a designed component in its own right: force tracking with contact gating, a
+      deadband and target bounds, reused across all task families rather than tuned per task. It also talks back
+      to the policy. If a force target is still not met after a bounded number of correction cycles, the layer
+      signals the policy to replan instead of pushing further.</li>
+      <li><b>A complete robot-learning system, from hardware to algorithms.</b> Glove calibration, retargeting,
+      controller and policies, released as a whole once the study is complete.</li>
+    </ol>
   </div></div>
 </section>
 
@@ -467,12 +498,22 @@ footer a{color:var(--soft)}
 <footer>
   <div class="container"><div class="narrow">
     <p class="ref"><strong>Contact-Grounded Policy</strong> [1] corresponds to <strong>structure 2</strong>,
-    and learns force-aware behavior from teleoperated robot demonstrations. In contrast, this proposal studies
-    whether force-aware contact targets can be recovered from <strong>human demonstrations</strong> and tracked
-    in <span class="f">closed loop</span> by a real-time robot-side controller.</p>
+    and learns force-aware behavior from teleoperated robot demonstrations. <strong>ReForce</strong> [2] is the
+    closest to <strong>structure 3</strong>: a residual force tracker, learned in simulation, corrects the
+    retargeted action in <span class="f">closed loop</span> from measured fingertip force. Its policy, however,
+    sees neither measured force nor an object-centric point cloud, so its tasks run blind.</p>
+    <p class="ref">In contrast, this proposal studies force-aware transfer from <strong>human demonstrations</strong>
+    across all three structures, with what the policy observes &mdash; measured force, object-centric point
+    clouds &mdash; as part of what is varied.</p>
     <p class="ref cite">[1] Xu, Z., Wang, Y., Abbatematteo, B., Preechayasomboon, J., Chan, S., Colonnese, N.,
     and Memar, A. H. Contact-Grounded Policy: Dexterous Visuotactile Policy with Generative Contact Grounding.
     arXiv:2603.05687, 2026.</p>
+    <p class="ref cite">[2] Wu, Y., Zeng, L., Jing, C., Ye, J., and Wang, X. ReForce: Learning Force-aware
+    Retargeting for Dexterous Manipulation. arXiv:2608.15560, 2026.</p>
+    <!-- TODO: comparison table of related force-aware methods (one row per paper: force source, where force
+         enters, policy sees measured force?, closed-loop refinement?, observation, tasks). Wrap it in
+         <div class="tbl-wrap"><table class="cmp">…</table></div> so it scrolls sideways on phones. -->
+    <p class="todo">Comparison table of related force-aware methods: TODO.</p>
   </div></div>
 </footer>
 
@@ -485,9 +526,9 @@ execution:{
   colw:"156px 136px 164px 148px 76px", gap:"44px", padBottom:96,
   variants:[
     {id:"offline", n:"1", label:"Offline",
-     claim:"Force only shapes the training labels. Nothing measures it during execution."},
+     claim:"Force only shapes the training labels. Nothing measures it during execution, so deployment needs no tactile sensor."},
     {id:"feedforward", n:"2", label:"Feedforward",
-     claim:"The policy predicts a force target, but execution uses it open-loop without measured force feedback."},
+     claim:"The policy predicts a force target, and a fixed spring rule turns it into a joint offset — open-loop, without measured force feedback."},
     {id:"closedloop", n:"3", label:"Closed-loop",
      claim:"A fast controller compares the force target against measured force and corrects on the error."}
   ],
@@ -526,9 +567,10 @@ execution:{
      nmBy:{feedforward:"Open-loop Refinement Layer", closedloop:"Middle-level Layer"},
      dBy:{
        feedforward:{what:"Turns the predicted kinematic and force targets into a joint command.",
+        how:"The same spring rule structure 1 applies to its labels, now applied online to the prediction: <span class='m'>q<sup>cmd</sup> = q<sup>tar</sup> + k&thinsp;F<sup>tar</sup></span>, with one constant <span class='m'>k</span> fitted on the robot hand.",
         hard:"It applies the correction without ever observing the force that resulted, so nothing tells it whether the correction was right. That is the sense in which it is open-loop."},
        closedloop:{what:"A fast controller that tracks measured force against the target, sitting above the built-in controller. <b class='hot'>This layer is the core design problem of the proposal.</b>",
-        how:"<b class='hot'>A simple PID-style force controller is the default implementation.</b> An RL-based refinement layer is optional if time allows.",
+        how:"<b class='hot'>A simple PID-style force controller is the default implementation.</b> A learned refinement layer, by RL or by supervised force tracking in simulation as in ReForce [2], is optional if time allows.",
         hard:"<b class='hot'>Contact gating</b> so it does not push before contact, a <b class='hot'>deadband</b> against tactile noise, and <b class='hot'>bounds on the target</b> so a bad prediction cannot drive the fingers into the object.",
         later:"With a contact or tactile latent the target need not be force at all. RL could learn to reach a target latent directly, and force becomes the simplest case of it."}}},
     {id:"pd", c:4,r:2, rs:2, nm:"Low-level PD joint controller", v:["offline","feedforward","closedloop"],
