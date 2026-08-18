@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ZeroFACT: Zero-Shot Force-Aware Contact Transfer for Contact-Rich Dexterous Manipulation</title>
 <meta name="description" content="ZeroFACT studies whether contact-rich dexterous skills can be transferred zero-shot from human demonstrations by learning force-aware contact targets and tracking them with a real-time robot-side controller.">
 
@@ -51,7 +52,7 @@ strong{color:var(--head); font-weight:600}
 /* ── hero ───────────────────────────────────────────────────────────── */
 .hero{text-align:center; padding:76px 0 52px; border-top:0}
 .hero h1{
-  font-size:clamp(30px,4.6vw,44px); line-height:1.18; font-weight:600;
+  font-size:clamp(25px,5.6vw,44px); line-height:1.2; font-weight:600;
   letter-spacing:-.015em; max-width:900px; margin:0 auto 14px; text-wrap:balance;
 }
 .hero .tag{font-size:17px; color:var(--soft); margin:0 auto 30px; text-wrap:balance}
@@ -143,7 +144,11 @@ code{font-family:var(--mono); font-size:.87em; background:var(--grey);
 }
 
 /* ── the interactive figure ─────────────────────────────────────────── */
-.stage-wrap{overflow-x:auto; padding:4px 0 8px}
+.stage-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; padding:4px 0 8px;
+            overscroll-behavior-x:contain}
+.scroll-hint{display:none; font-size:12.5px; color:var(--soft); text-align:center; margin:0 0 10px}
+/* shown exactly when the diagrams stop fitting the column */
+@media (max-width:1007px){.scroll-hint{display:block}}
 .stage{position:relative; width:max-content; min-width:100%; margin:0 auto}
 .stage svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none}
 .stage svg .hit{pointer-events:stroke; stroke-width:20; stroke:transparent; fill:none; cursor:pointer}
@@ -260,6 +265,54 @@ footer{padding:32px 0 60px; border-top:1px solid var(--rule);
 footer a{color:var(--soft)}
 
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+/* ── phones and small tablets ────────────────────────────────────────
+   The two diagrams are fixed-width by construction, so below their
+   natural width they scroll sideways inside .stage-wrap rather than
+   being squashed. Everything else reflows.                          */
+@media (max-width:760px){
+  body{font-size:15.5px; line-height:1.6}
+  .container,.container.wide{padding:0 18px}
+  section{padding:34px 0}
+  #method,#labels{padding:38px 0}
+  .hero{padding:44px 0 30px}
+
+  h2{font-size:23px; margin-bottom:20px}
+  h3{font-size:17px; margin:24px 0 8px}
+  .hero .tag{font-size:15.5px; margin-bottom:24px}
+
+  .summary{font-size:15.5px; padding:16px 18px; margin-bottom:22px}
+  .lead{font-size:16px}
+  /* centred running text goes ragged on a narrow column */
+  .intro{margin-bottom:24px; text-align:left}
+  .eq-box .eq-note{text-align:left}
+  .key{text-align:left}
+  .hyp{font-size:15.5px; padding:16px 18px; margin-top:26px}
+  .eq-box{padding:16px 18px; margin-top:22px}
+  .eq{font-size:17px}
+  .eq-lead{margin:18px 0 4px}
+  .key{font-size:13px}
+
+  .switch{gap:8px; margin-bottom:14px}
+  .switch button{font-size:15px; padding:10px 14px; gap:8px}
+  .switch button .n{width:22px; height:22px; font-size:12px}
+  .claim{font-size:15px; padding:13px 16px; margin-bottom:20px}
+
+  .readout{padding:16px 18px; min-height:0}
+  .readout .idle{font-size:14.5px; padding:14px 0}
+  .ro-head h3{margin:0; font-size:16px}
+
+  .ext{padding-left:15px}
+  ol.steps{padding-left:20px}
+  footer{padding:26px 0 44px}
+}
+
+/* very small phones */
+@media (max-width:400px){
+  .container,.container.wide{padding:0 14px}
+  .switch{gap:6px}
+  .switch button{font-size:14px; padding:9px 11px}
+}
 </style>
 
 <section class="hero">
@@ -293,6 +346,7 @@ footer a{color:var(--soft)}
     <p class="claim" data-claim="execution"></p>
 
     <figure>
+      <p class="scroll-hint">Swipe the diagram sideways to see the whole stack.</p>
       <div class="stage-wrap">
         <div class="stage" data-stage="execution">
           <svg role="img" aria-label="Block diagram of the robot execution stack: policy, refinement layer, low-level joint controller and robot, with feedback paths that differ per structure."></svg>
@@ -324,6 +378,7 @@ footer a{color:var(--soft)}
     <p class="claim" data-claim="labels"></p>
 
     <figure>
+      <p class="scroll-hint">Swipe the diagram sideways to see the whole pipeline.</p>
       <div class="stage-wrap">
         <div class="stage" data-stage="labels">
           <svg role="img" aria-label="Data flow from human glove tactile maps and hand kinematics, through contact detection, pressure to force calibration and contact-point retargeting, into robot policy labels."></svg>
