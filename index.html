@@ -1,5 +1,6 @@
-<title>Force in the Loop</title>
-<meta name="description" content="Force from demonstration, tracked in the loop. Three candidate structures for where contact force should enter a human to robot manipulation pipeline.">
+<meta charset="utf-8">
+<title>ZeroFACT: Zero-Shot Force-Aware Contact Transfer for Contact-Rich Dexterous Manipulation</title>
+<meta name="description" content="ZeroFACT studies whether contact-rich dexterous skills can be transferred zero-shot from human demonstrations by learning force-aware contact targets and tracking them with a real-time robot-side controller.">
 
 <style>
 /* ── palette: the deck's own colours, on a white academic sheet ─────── */
@@ -30,9 +31,10 @@ body{
   font-family:var(--sans); font-size:16px; line-height:1.65;
   -webkit-font-smoothing:antialiased;
 }
-.container{max-width:1000px; margin:0 auto; padding:0 24px}
-.container.wide{max-width:1180px}
-.narrow{max-width:760px; margin:0 auto}
+/* one column for the whole page: figures, tasks and prose share these edges */
+.container{max-width:1008px; margin:0 auto; padding:0 24px}
+.container.wide{max-width:1008px}
+.narrow{max-width:100%; margin:0}
 section{padding:46px 0}
 #method,#labels{padding:58px 0}
 section + section{border-top:1px solid var(--rule)}
@@ -57,10 +59,34 @@ strong{color:var(--head); font-weight:600}
 /* ── prose ──────────────────────────────────────────────────────────── */
 .just{text-align:justify; hyphens:auto}
 .lead{font-size:17px; margin:0 0 18px}
+
+/* key terms, coloured as in the figures: red is force, blue is kinematics */
+.f{color:var(--red); font-weight:600}
+.k{color:var(--blue-ink); font-weight:600}
+
+/* the abstract, set as a callout at the head of the page */
+.summary{
+  font-size:16.5px; line-height:1.62; text-align:left;
+  max-width:100%; margin:0 auto 26px; padding:20px 26px;
+  background:var(--grey); border:1px solid var(--rule2);
+  border-left:3px solid var(--red); border-radius:11px;
+}
+.summary .nm{color:var(--head); font-weight:700; letter-spacing:.01em}
+.hero .lead{text-align:left; text-wrap:pretty}
+
+/* the structure-3 controller, marked as the core design problem */
+.eq-box{
+  margin:28px 0 0; padding:20px 26px;
+  background:#fdf8f8; border:1px solid #f0dada;
+  border-left:3px solid var(--red); border-radius:11px;
+}
+.eq-box .eq-lead{margin:0 0 4px}
+.eq-box .eq{color:var(--red); margin:0}
+.eq-box .eq-note{font-size:14.5px; color:var(--soft); text-align:center; margin:10px 0 0}
 .eq-lead{text-align:center; margin:24px 0 6px}
 .eq{text-align:center; font-size:19px; color:var(--head); margin:0}
 .key{text-align:center; font-size:14px; color:var(--soft); margin:30px 0 0}
-.intro{text-align:center; max-width:74ch; margin:0 auto 30px; color:var(--text)}
+.intro{text-align:center; max-width:100%; margin:0 auto 30px; color:var(--text); text-wrap:pretty}
 .todo{color:var(--soft); font-style:italic; font-size:14.5px; margin-top:22px}
 .hyp{font-size:16.5px; margin:34px 0 0; padding:20px 24px;
      background:#fbfaf7; border:1px solid var(--rule2); border-left:3px solid var(--red);
@@ -179,15 +205,52 @@ code{font-family:var(--mono); font-size:.87em; background:var(--grey);
 .ro-body{columns:2; column-gap:34px; font-size:14.5px}
 @media (max-width:720px){.ro-body{columns:1}}
 .ro-field{break-inside:avoid; margin:0 0 11px}
-.ro-field b{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+.ro-field > b:first-child{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
             color:var(--soft); font-weight:600; margin-bottom:1px}
 .ro-field[data-kind="hard"] b{color:var(--red)}
 .ro-field[data-kind="later"] b{color:var(--later)}
 .ro-field[data-kind="later"]{color:var(--later)}
+.ro-body .hot{display:inline; color:var(--red); font-weight:600;
+              font-size:inherit; letter-spacing:normal; text-transform:none; margin:0}
 .pinned{font-size:12.5px; color:var(--soft); margin:10px 0 0}
 
 figcaption{font-size:14px; color:var(--soft); text-align:center; margin-top:16px}
 figcaption b{color:var(--head)}
+
+/* ── task gallery ───────────────────────────────────────────────────── */
+.tasks{display:grid; grid-template-columns:repeat(3,1fr); gap:26px 22px; margin-top:4px}
+@media (max-width:940px){.tasks{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:620px){.tasks{grid-template-columns:1fr}}
+
+.task{
+  margin:0; display:flex; flex-direction:column; overflow:hidden;
+  background:#fff; border:1px solid var(--rule2); border-radius:11px;
+  transition:box-shadow .15s, border-color .15s;
+}
+.task:hover{border-color:#c4c9d0; box-shadow:0 2px 14px rgba(31,56,100,.07)}
+
+.task-vid{
+  position:relative; aspect-ratio:16/9; background:#eceff2;
+  border:0; padding:0; margin:0; width:100%; cursor:pointer; display:block;
+}
+.task-vid video,.task-vid img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+.task-vid:focus-visible{outline:2px solid var(--navy); outline-offset:-2px}
+.task-vid .play{
+  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.12);
+}
+.task-vid[data-paused="1"] .play{display:flex}
+.task-vid .play span{
+  width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.9);
+  border:1px solid var(--rule2); color:var(--head);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; padding-left:3px; box-shadow:0 1px 6px rgba(0,0,0,.14);
+}
+
+.task-body{padding:13px 16px 14px}
+.task-body h3{margin:0; font-size:16px; text-align:center}
 
 ul.plain{margin:0; padding-left:20px}
 ul.plain li{margin-bottom:7px}
@@ -201,17 +264,19 @@ footer a{color:var(--soft)}
 
 <section class="hero">
   <div class="container">
-    <h1>Transferring Human Contact Force to Dexterous Robot Manipulation</h1>
-    <p class="tag">Force from demonstration, tracked in the loop.</p>
+    <h1>ZeroFACT: Zero-Shot Force-Aware Contact Transfer for Contact-Rich Dexterous Manipulation</h1>
+    <p class="tag">Force-aware contact targets, tracked in real time.</p>
     <div class="narrow">
-      <p class="lead">Human demonstrations carry motion and force together. Retargeting can recover the
-      geometry well: we can tell which fingertips touched the object and where. What geometry cannot tell us
-      is how hard. Put the robot's fingers in exactly the positions the human used and the force that actually
-      drives the contact is still unconstrained, so the same motion can succeed or fail.</p>
-      <p class="lead">So we take two targets from every demonstration. The <strong>kinematic target</strong>
-      says roughly where the fingers should be. The <strong>force target</strong> is the one that decides the
-      outcome: the robot should reproduce the force profile the human produced on the same task. Reaching it
-      needs a robot-side controller, sitting above the built-in one, that tracks the force we recorded.</p>
+      <p class="summary"><span class="nm">ZeroFACT</span> studies whether contact-rich dexterous skills can be
+      transferred <strong>zero-shot</strong> from human demonstrations by treating
+      <span class="f">active contact and contact force</span> as transferable
+      <strong>interaction intent</strong>.</p>
+
+      <p class="lead">Retargeting can recover the <span class="k">geometry of contact</span>: which fingers
+      touch the object, where contacts occur, and how the hand moves through the task. However, geometry alone
+      does not determine the physical interaction. We therefore pair each retargeted
+      <span class="k">kinematic target</span> with a <span class="f">force target</span>, and use a real-time
+      robot-side controller to track the desired contact condition during execution.</p>
     </div>
   </div>
 </section>
@@ -219,8 +284,10 @@ footer a{color:var(--soft)}
 <section id="method">
   <div class="container wide">
     <h2>Where does force enter the pipeline?</h2>
-    <p class="intro">Three candidate structures. They share the demonstrations, the retargeting, the policy
-    backbone and the evaluation, and differ only in where the force is allowed to act.</p>
+    <p class="intro">We propose to compare <strong>three ways for force to enter the pipeline</strong>:
+    as an <strong>offline label transformation</strong>, as a
+    <strong>feedforward prediction target</strong>, or as a
+    <span class="f">closed-loop control objective</span>.</p>
 
     <div class="switch" role="group" aria-label="Structure" data-fig="execution"></div>
     <p class="claim" data-claim="execution"></p>
@@ -237,10 +304,11 @@ footer a{color:var(--soft)}
     </figure>
 
     <div class="narrow">
-      <p class="hyp"><strong>Hypothesis.</strong> Structure 3 is the one we expect to matter. Keeping force as
-      an explicit target, and giving the robot a controller that tracks it, should produce a learned model that
-      is compatible with force rather than only with position. That is what we think allows a dexterous skill
-      to move from a human hand to a robot one.</p>
+      <p class="hyp"><strong>Hypothesis.</strong> <span class="f">Closed-loop force tracking</span> is necessary
+      for reliable <strong>zero-shot transfer</strong> of contact-rich dexterous skills. Keeping force as an
+      explicit target, and tracking it with a real-time controller, should produce policies that are compatible
+      with <strong>physical interaction</strong> rather than only with
+      <strong>kinematic imitation</strong>.</p>
     </div>
   </div>
 </section>
@@ -248,9 +316,9 @@ footer a{color:var(--soft)}
 <section id="labels">
   <div class="container wide">
     <h2>From human demonstration to robot labels</h2>
-    <p class="intro">Both label streams come from the same recording. The glove gives the contact set and,
-    after calibration, the contact force. The hand pose gives the retargeted robot state, with the contact set
-    acting as the retargeting target.</p>
+    <p class="intro"><span class="k">Hand pose</span> provides the retargeted robot kinematic state, while
+    <span class="f">glove tactile readings</span> provide the active contact set and, after calibration,
+    the corresponding contact-force targets.</p>
 
     <div class="switch" role="group" aria-label="Label pipeline" data-fig="labels"></div>
     <p class="claim" data-claim="labels"></p>
@@ -267,32 +335,41 @@ footer a{color:var(--soft)}
     </figure>
 
     <div class="narrow">
-      <p class="eq-lead">Structures 2 and 3 give the policy</p>
-      <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+n</sub>,&thinsp; F<sup>tar</sup><sub>t:t+n</sub>)</span></p>
-      <p class="eq-lead">and structure 3 adds the controller</p>
-      <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
-      <p class="key"><span class="m">q</span> robot kinematic state &nbsp;·&nbsp;
-        <span class="m">F</span> fingertip contact force &nbsp;·&nbsp;
-        <span class="m">t…</span> the several steps after <span class="m">t</span>, up to <span class="m">N</span>,
-        on the controller's faster clock</p>
+      <p class="eq-lead">Structures 2 and 3 train the policy to predict short-horizon kinematic and force targets</p>
+      <p class="eq"><span class="m">(q<sup>tar</sup><sub>t:t+N</sub>,&thinsp; F<sup>tar</sup><sub>t:t+N</sub>)</span></p>
+
+      <div class="eq-box">
+        <p class="eq-lead">Structure 3 additionally uses a
+          <span class="f">real-time refinement controller</span></p>
+        <p class="eq"><span class="m">q<sup>cmd</sup> = 𝓡(q<sup>tar</sup>, F<sup>tar</sup>, q, F)</span></p>
+        <p class="eq-note"><strong>Designing this controller is the central challenge of the proposal.</strong>
+          It has to track force at a rate the policy cannot reach, act only once contact is established, and
+          stay stable under tactile noise. Everything else in the pipeline exists to give it a target worth
+          tracking.</p>
+      </div>
+
+      <p class="key">where <span class="m">q</span> is the robot kinematic state,
+        <span class="m">F</span> is the measured fingertip contact force, and
+        <span class="m">N</span> is the prediction horizon on the controller clock</p>
     </div>
+  </div>
+</section>
+
+<section id="tasks">
+  <div class="container wide">
+    <h2>Proposed Tasks</h2>
+
+    <div class="tasks"></div>
+
+    <p class="key">Hover or tap a clip to play it.</p>
   </div>
 </section>
 
 <section id="eval">
   <div class="container"><div class="narrow">
     <h2>Evaluation</h2>
-    <p>Tasks where the pose alone is not enough:</p>
-    <ul class="plain">
-      <li>compliant pressing and dispensing</li>
-      <li>holding an object under changing load</li>
-      <li>recovering from a disturbance</li>
-    </ul>
-    <p><strong>Metrics.</strong> Force error, overshoot, contact loss, recovery time, task success, robustness
-    to a change of stiffness, load or geometry.</p>
-    <p><strong>Ablations.</strong> Force as policy input, force as policy output, offline against online force
-    use, closed-loop feedback, controller rate, contact gating, and the residual
-    <span class="m">F<sup>tar</sup> − F</span> against raw force.</p>
+    <p><strong>Metrics.</strong> Policy success rate for learned execution, replay force error for force
+    tracking, and replay success rate for validating the demonstration-to-controller pipeline.</p>
   </div></div>
 </section>
 
@@ -300,41 +377,44 @@ footer a{color:var(--soft)}
   <div class="container"><div class="narrow">
     <h2>Milestones</h2>
     <ol class="steps">
-      <li><b>Replay on hardware.</b> Take one recorded trajectory, position and force together, and replay it
-      on the real robot until the task actually succeeds. This is the check that the whole data flow holds:
-      glove pressure to force, hand pose to contact points, targets to controller.</li>
-      <li><b>A policy in the loop.</b> The same stack driven by a learned policy in real time, on an easy task
-      first, with non-zero success. At this stage closing the loop at rate matters more than the number.</li>
-      <li><b>The full comparison.</b> All three structures implemented and all tasks run. This is the main
-      experiment, and where the hypothesis is either supported or it is not.</li>
+      <li><b>Hardware replay.</b> Replay one recorded contact-rich trajectory on the real robot using both
+      kinematic and force targets. This validates the full data path from glove pressure to calibrated force,
+      from human hand pose to robot contact targets, and from targets to executable controller commands.</li>
+      <li><b>Policy-in-the-loop execution.</b> Integrate a learned policy with the real-time controller on a
+      simple contact-rich task. The goal is to demonstrate <span class="f">stable closed-loop execution</span>
+      before scaling to broader task families.</li>
+      <li><b>Full structure comparison.</b> Implement all three policy&ndash;controller structures and evaluate
+      them across the proposed task families. This tests whether explicit closed-loop force tracking improves
+      zero-shot contact-rich transfer.</li>
     </ol>
 
-    <h3 class="ext-h">Extensions</h3>
+    <h3 class="ext-h">Bonus / Extensions</h3>
     <div class="ext">
-      <p><b>Reinforcement learning.</b> Rebuild the setup in simulation and learn the middle layer instead of
-      tuning it by hand. The work is getting force, or precise tactile, out of the simulator faithfully. Isaac
-      Lab should make that tractable.</p>
-      <p><b>Two hands.</b> Everything above assumes a single hand. Bringing in the second one changes the
-      problem rather than doubling it, and we expect it to be a challenge on its own.</p>
-      <p><b>A latent tactile target instead of force.</b> Builds on the RL extension. Force is only the
-      simplest thing a contact target can be. Acting on a target means knowing which direction increases it,
-      something like a Jacobian. With explicit force that direction is available. With an abstract tactile
-      latent it is not, because there is no easy way to say how moving a finger changes the latent. RL never
-      needs that direction written down, so it can learn on the latent directly.</p>
-      <p><b>Deployment without tactile sensors.</b> Most robot hands do not have them. A compliant controller
-      offers a substitute: a persistent gap between the commanded target and the measured state means something
-      is pushing back, which is a fake tactile signal we can read force from. If it holds, force-aware
-      manipulation stops requiring force sensors and the method carries over to hands that have none. We think
-      this is the strongest of the four.</p>
+      <p><b>Reinforcement learning.</b> Reconstruct the controller stack in simulation and learn the refinement
+      layer instead of hand-designing it. The main challenge is simulating force or tactile feedback with
+      sufficient fidelity for transfer.</p>
+      <p><b>Bimanual contact-rich manipulation.</b> The initial study focuses on one hand. Extending to two
+      hands introduces coupled contacts, load sharing, and coordination constraints, making it a distinct
+      research problem rather than a direct scale-up.</p>
+      <p><b>Latent tactile targets.</b> Force is the simplest explicit contact target. A richer tactile latent
+      could represent contact state more generally, but unlike force, it does not provide an obvious direction
+      for local control. A learned RL refinement layer could optimize such latent targets directly without
+      requiring an explicit tactile Jacobian.</p>
+      <p><b>Deployment without tactile sensors.</b> Many robot hands do not include tactile sensing. A compliant
+      controller may provide a <b>proprioceptive contact proxy</b>: persistent error between commanded and
+      measured joint states indicates external resistance. If this proxy can estimate contact force reliably,
+      force-aware manipulation could transfer to hands without tactile sensors.</p>
     </div>
-    <p class="todo">Tasks, hardware, videos and preliminary results: TODO.</p>
+    <p class="todo">Hardware and preliminary results: TODO.</p>
   </div></div>
 </section>
 
 <footer>
   <div class="container"><div class="narrow">
-    <p class="ref">Structure 1 is close to what Contact-Grounded Policy does, but it learns from teleoperation
-    rather than from human demonstrations. As far as we know nobody has taken this from human data yet.</p>
+    <p class="ref"><strong>Contact-Grounded Policy</strong> [1] corresponds to <strong>structure 2</strong>,
+    and learns force-aware behavior from teleoperated robot demonstrations. In contrast, this proposal studies
+    whether force-aware contact targets can be recovered from <strong>human demonstrations</strong> and tracked
+    in <span class="f">closed loop</span> by a real-time robot-side controller.</p>
     <p class="ref cite">[1] Xu, Z., Wang, Y., Abbatematteo, B., Preechayasomboon, J., Chan, S., Colonnese, N.,
     and Memar, A. H. Contact-Grounded Policy: Dexterous Visuotactile Policy with Generative Contact Grounding.
     arXiv:2603.05687, 2026.</p>
@@ -347,12 +427,12 @@ footer a{color:var(--soft)}
 /* ── data ───────────────────────────────────────────────────────────── */
 const FIGS = {
 execution:{
-  colw:"172px 118px 180px 180px 124px", gap:"58px", padBottom:96,
+  colw:"156px 136px 164px 148px 76px", gap:"44px", padBottom:96,
   variants:[
     {id:"offline", n:"1", label:"Offline",
      claim:"Force only shapes the training labels. Nothing measures it during execution."},
     {id:"feedforward", n:"2", label:"Feedforward",
-     claim:"The policy predicts force, but the layer acting on it never sees the force it produced."},
+     claim:"The policy predicts a force target, but execution uses it open-loop without measured force feedback."},
     {id:"closedloop", n:"3", label:"Closed-loop",
      claim:"A fast controller compares the force target against measured force and corrects on the error."}
   ],
@@ -368,7 +448,7 @@ execution:{
      nm:"Retargeted Robot States", v:["offline","feedforward","closedloop"],
      d:{what:"A per-timestep robot hand configuration. Only the contact points recorded in the human data are used as the retargeting target.",
         how:"Optimization-based or geometry-based retargeting. We already have both.",
-        hard:"Retargeting could become the bottleneck, so we assume it is close to perfect and do not build the project on it. Even perfect retargeting only matches geometry. It says nothing about the force that will actually be applied, which is the reason for everything to the right of this box."}},
+        hard:"We treat retargeting as a usable upstream component. It provides contact-consistent kinematic targets, but it does not determine the force that will actually be applied during execution."}},
     {id:"labels-F", c:1,r:3, dashedBy:{offline:1}, fillBy:{feedforward:"blue",closedloop:"blue"},
      nm:"Contact Force Recordings", v:["offline","feedforward","closedloop"],
      d:{what:"Per-fingertip contact force at each active contact, for every timestep.",
@@ -378,6 +458,8 @@ execution:{
      d:{what:"The only label structure 1 trains on.",
         how:"The kinematic state, displaced by the force recordings through the spring model. Imitation learning then runs unchanged.",
         hard:"After this box force has left the system. Whatever the spring model got wrong is baked into the labels."}},
+    {id:"pcd", c:2,r:1, fill:"green", nm:"Object-Centric Point Cloud", sub:"observation",
+     v:["offline","feedforward","closedloop"]},
     {id:"policy", c:2,r:2, rs:2, nm:"policy", v:["offline","feedforward","closedloop"],
      dBy:{
        offline:{what:"Predicts the refined robot action and nothing else. Force never reaches it."},
@@ -390,9 +472,9 @@ execution:{
      dBy:{
        feedforward:{what:"Turns the predicted kinematic and force targets into a joint command.",
         hard:"It applies the correction without ever observing the force that resulted, so nothing tells it whether the correction was right. That is the sense in which it is open-loop."},
-       closedloop:{what:"A fast controller that tracks measured force against the target, sitting above the built-in controller.",
-        how:"Two options. A learning-free PID on the force error, which we want running first. Or RL, which we treat as later work.",
-        hard:"Contact gating so it does not push before contact, a deadband against tactile noise, and bounds on the target.",
+       closedloop:{what:"A fast controller that tracks measured force against the target, sitting above the built-in controller. <b class='hot'>This layer is the core design problem of the proposal.</b>",
+        how:"<b class='hot'>A simple PID-style force controller is the default implementation.</b> An RL-based refinement layer is optional if time allows.",
+        hard:"<b class='hot'>Contact gating</b> so it does not push before contact, a <b class='hot'>deadband</b> against tactile noise, and <b class='hot'>bounds on the target</b> so a bad prediction cannot drive the fingers into the object.",
         later:"With a contact or tactile latent the target need not be force at all. RL could learn to reach a target latent directly, and force becomes the simplest case of it."}}},
     {id:"pd", c:4,r:2, rs:2, nm:"Low-level PD joint controller", v:["offline","feedforward","closedloop"],
      d:{what:"The controller built into the robot. Standard, and identical in all three structures."}},
@@ -407,6 +489,8 @@ execution:{
         feedback:"The same, plus real-time tactile. It passes through the same pressure to force calibration used on the glove, so the readings sit in the same space as the training targets."}}}
   ],
   edges:[
+    {id:"e-pcd-policy", from:"pcd",fs:"bottom", to:"policy",ts:"top", v:["offline","feedforward","closedloop"],
+     d:{what:"Observation input to the policy, identical in all three structures."}},
     {id:"e-sup-pseudo", from:"pseudo-action",fs:"right", to:"policy",ts:"bottom", sig:"sup", dash:1, v:["offline"],
      d:{what:"Imitation learning on the pseudo actions."}},
     {id:"e-sup-q", from:"labels-q",fs:"right", to:"policy",ts:"left", to_:-14, sig:"sup", dash:1, v:["feedforward","closedloop"],
@@ -420,14 +504,14 @@ execution:{
         hard:"One conversion, done once, with a fixed k. It cannot react to stiffness, load or grasp state at run time."}},
 
     {id:"e-policy-pd", from:"policy",fs:"right", to:"pd",ts:"left", v:["offline"],
-     lab:"q<sup>tar</sup><sub>t+n</sub>",
+     lab:"q<sup>tar</sup><sub>t+N</sub>",
      d:{what:"Joint targets straight to the controller.",
         hard:"The column this arrow crosses is empty. That gap is what structures 2 and 3 fill."}},
     {id:"e-policy-refine-q", from:"policy",fs:"right", to:"refine",ts:"left", fo:-16, to_:-16, v:["feedforward","closedloop"],
-     labBy:{feedforward:"q<sup>tar</sup><sub>t+n</sub>", closedloop:"q<sup>tar</sup><sub>t:t+n</sub>"},
+     labBy:{feedforward:"q<sup>tar</sup><sub>t+N</sub>", closedloop:"q<sup>tar</sup><sub>t:t+N</sub>"},
      d:{what:"The kinematic target. Roughly where the fingers should be."}},
     {id:"e-policy-refine-F", from:"policy",fs:"right", to:"refine",ts:"left", fo:16, to_:16, v:["feedforward","closedloop"],
-     labBy:{feedforward:"F<sup>tar</sup><sub>t+n</sub>", closedloop:"F<sup>tar</sup><sub>t:t+n</sub>"},
+     labBy:{feedforward:"F<sup>tar</sup><sub>t+N</sub>", closedloop:"F<sup>tar</sup><sub>t:t+N</sub>"},
      d:{what:"The force target. The profile the human produced on the same task, and the thing that decides the outcome."}},
     {id:"e-refine-pd", from:"refine",fs:"right", to:"pd",ts:"left", v:["feedforward","closedloop"],
      lab:"q′<sup>tar</sup><sub>t…</sub>",
@@ -454,17 +538,17 @@ execution:{
 },
 
 labels:{
-  colw:"162px 184px 192px 192px", padBottom:16,
+  colw:"152px 176px 184px 182px", padBottom:16,
   variants:[
-    {id:"shared", n:"2·3", label:"Shared pipeline",
-     claim:"Force stays an explicit target. Two supervision streams, no offline conversion."},
     {id:"offline", n:"1", label:"Offline pipeline",
-     claim:"Force and kinematics collapse into a single action label before training."}
+     claim:"Force and kinematics collapse into a single action label before training."},
+    {id:"shared", n:"2·3", label:"Shared pipeline",
+     claim:"Force stays an explicit target. Two supervision streams, no offline conversion."}
   ],
   caps:[
     {id:"cap-human", c:3, r:1, text:"Human Data", color:"green", v:["shared","offline"]},
     {id:"cap-out", c:3, r:3, text:"Robot Policy Labels", color:"blue", v:["shared"]},
-    {id:"cap-out-off", c:2, r:6, text:"Robot Policy Labels", color:"blue", v:["offline"]}
+    {id:"cap-out-off", c:2, r:5, text:"Robot Policy Labels", color:"blue", v:["offline"]}
   ],
   nodes:[
     {id:"glove", c:2,r:1, fill:"green", nm:"Glove Tactile Maps", v:["shared","offline"],
@@ -483,7 +567,7 @@ labels:{
     {id:"retarget", c:4,r:2, nm:"Kinematic Retargeting", v:["shared","offline"],
      d:{what:"Maps the human hand onto the robot hand, using the recorded contact points as the target.",
         how:"Optimization-based or geometry-based. We have both.",
-        hard:"Could be the bottleneck, so we assume it is close to perfect. Even then it only matches geometry, never force."}},
+        hard:"We assume retargeting is usable for producing contact-consistent robot states. Even then, it only specifies geometry, not force."}},
     {id:"forcerec", c:2,r:3, fillBy:{shared:"blue"}, nm:"Contact Force Recordings", sub:"(shared)", v:["shared","offline"],
      d:{what:"Per-fingertip contact force at each active contact.",
         how:"The contact set selects which forces are kept as targets.",
@@ -886,6 +970,81 @@ function buildFigure(key){
   render();
 }
 
+/* ── task gallery ───────────────────────────────────────────────────── */
+const TASKS = [
+  {file:"push_lid",         title:"Press a latched lid"},
+  {file:"screw_peanut_jar", title:"Screw on a jar lid"},
+  {file:"unscrew_camera",   title:"Unscrew a camera"},
+  {file:"flip_page",        title:"Flip a page"},
+  {file:"unplug_charger",   title:"Unplug a charger"},
+  {file:"pivot_cube",       title:"Pivot a cube"}
+];
+
+function buildTasks(){
+  const grid = document.querySelector(".tasks");
+  if (!grid) return;
+
+  const io = "IntersectionObserver" in window ? new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const v = en.target;
+      if (!v.src){ v.src = v.dataset.src; v.preload = "auto"; }
+      io.unobserve(v);
+    });
+  }, {rootMargin:"300px 0px"}) : null;
+
+  TASKS.forEach(t => {
+    const fig = document.createElement("figure");
+    fig.className = "task";
+
+    const btn = document.createElement("button");
+    btn.className = "task-vid";
+    btn.dataset.paused = "1";
+    btn.setAttribute("aria-label", "Play the " + t.title.toLowerCase() + " demonstration");
+
+    const v = document.createElement("video");
+    v.muted = true; v.loop = true; v.playsInline = true;
+    v.preload = "none";
+    v.poster = "assets/tasks/" + t.file + ".jpg";
+    v.dataset.src = "assets/tasks/" + t.file + ".mp4";
+    v.setAttribute("disablepictureinpicture", "");
+
+    const ov = document.createElement("span");
+    ov.className = "play";
+    ov.innerHTML = "<span>&#9654;</span>";
+    btn.append(v, ov);
+
+    let locked = false;
+    const start = () => {
+      if (!v.src){ v.src = v.dataset.src; v.preload = "auto"; }
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    };
+    const stop = () => v.pause();
+
+    v.onplay  = () => { btn.dataset.paused = "0";
+                        btn.setAttribute("aria-label", "Pause the " + t.title.toLowerCase() + " demonstration"); };
+    v.onpause = () => { btn.dataset.paused = "1";
+                        btn.setAttribute("aria-label", "Play the " + t.title.toLowerCase() + " demonstration"); };
+
+    btn.onpointerenter = ev => { if (ev.pointerType === "mouse" && !locked) start(); };
+    btn.onpointerleave = ev => { if (ev.pointerType === "mouse" && !locked) stop(); };
+    btn.onclick = () => {
+      if (v.paused){ locked = true; start(); }
+      else { locked = false; stop(); }
+    };
+
+    const body = document.createElement("div");
+    body.className = "task-body";
+    body.innerHTML = '<h3>' + t.title + '</h3>';
+
+    fig.append(btn, body);
+    grid.appendChild(fig);
+    if (io) io.observe(v);
+  });
+}
+
 buildFigure("execution");
 buildFigure("labels");
+buildTasks();
 </script>
