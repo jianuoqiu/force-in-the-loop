@@ -272,8 +272,11 @@ footer{padding:32px 0 60px; border-top:1px solid var(--rule);
 footer a{color:var(--soft)}
 
 /* ── comparison table ───────────────────────────────────────────────── */
+/* position:relative so the absolutely positioned .sr labels inside the cells
+   are clipped by this scroller. Without it they escape it, stretch the body
+   past the column, and phones widen the layout viewport to match.        */
 .tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;
-          overscroll-behavior-x:contain; padding-bottom:2px}
+          overscroll-behavior-x:contain; padding-bottom:2px; position:relative}
 table.cmp{border-collapse:collapse; width:100%; min-width:740px; font-size:14px}
 table.cmp th,table.cmp td{padding:9px 10px; text-align:center;
                           border-bottom:1px solid var(--rule)}
@@ -323,6 +326,69 @@ table.cmp tr.self th,table.cmp tr.self td{border-bottom-color:#f0dada}
 }
 @media (max-width:800px){.tbl-hint{display:block}}
 @media print{.sidenav{display:none}}
+
+/* ── compact contents menu ──────────────────────────────────────────── */
+/* below 1080px there is no gutter for the rail, so the same sections are
+   reached from a floating button that also names the current one       */
+.tocbtn{
+  display:none; position:fixed; z-index:60;
+  right:calc(14px + env(safe-area-inset-right));
+  bottom:calc(14px + env(safe-area-inset-bottom));
+  align-items:center; gap:8px; max-width:min(64vw,230px);
+  font-family:var(--sans); font-size:13px; font-weight:500; color:var(--head);
+  background:#fff; border:1px solid var(--rule2); border-radius:999px;
+  padding:9px 15px 9px 12px; cursor:pointer;
+  box-shadow:0 2px 16px rgba(31,56,100,.16);
+  -webkit-tap-highlight-color:transparent;
+}
+.tocbtn svg{flex:none; color:var(--soft)}
+.tocbtn .cur{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tocbtn[aria-expanded="true"]{background:var(--head); border-color:var(--head); color:#fff}
+.tocbtn[aria-expanded="true"] svg{color:rgba(255,255,255,.7)}
+.tocbtn:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+
+.tocveil{
+  display:none; position:fixed; inset:0; z-index:59;
+  background:rgba(24,28,35,.32);
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .18s, visibility .18s;
+}
+.tocmenu{
+  display:none; position:fixed; z-index:61;
+  right:calc(14px + env(safe-area-inset-right));
+  bottom:calc(66px + env(safe-area-inset-bottom));
+  width:min(72vw,236px); padding:6px;
+  background:#fff; border:1px solid var(--rule2); border-radius:13px;
+  box-shadow:0 10px 34px rgba(31,56,100,.22);
+  max-height:min(66vh,470px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(8px) scale(.97); transform-origin:100% 100%;
+  transition:opacity .16s, transform .16s, visibility .16s;
+}
+.tocveil[data-open="1"]{opacity:1; visibility:visible; pointer-events:auto}
+.tocmenu[data-open="1"]{opacity:1; visibility:visible; pointer-events:auto;
+                        transform:none}
+.tocmenu .hd{
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--soft); font-weight:600; margin:0; padding:6px 11px 5px;
+}
+.tocmenu a{
+  display:flex; align-items:center; gap:10px; padding:9px 11px;
+  border-radius:8px; text-decoration:none; color:var(--text);
+  font-size:14px; line-height:1.25;
+}
+.tocmenu a .dot{width:7px; height:7px; border-radius:50%; flex:none;
+                background:var(--rule2)}
+.tocmenu a[aria-current="true"]{color:var(--red); font-weight:600; background:#fdf4f4}
+.tocmenu a[aria-current="true"] .dot{background:var(--red)}
+.tocmenu a:focus-visible{outline:2px solid var(--navy); outline-offset:-2px}
+
+@media (max-width:1079.98px){
+  .tocbtn{display:inline-flex}
+  .tocveil,.tocmenu{display:block}
+}
+@media print{.tocbtn,.tocveil,.tocmenu{display:none !important}}
 
 html{scroll-behavior:smooth}
 section,footer{scroll-margin-top:22px}
@@ -391,9 +457,9 @@ section,footer{scroll-margin-top:22px}
 
       <p class="lead">Retargeting can recover the <span class="k">geometry of contact</span>: which fingers
       touch the object, where contacts occur, and how the hand moves through the task. However, geometry alone
-      does not determine the physical interaction. We therefore pair each retargeted
-      <span class="k">kinematic target</span> with a <span class="f">force target</span>, and use a real-time
-      robot-side controller to track the desired contact condition during execution.</p>
+      does not determine the physical interaction. We therefore add a <span class="f">force target</span> on top
+      of each retargeted <span class="k">kinematic target</span>, and plan to design a real-time robot-side
+      controller to refine actions to also consider desired contact force learned from human demonstration.</p>
     </div>
   </div>
 </section>
@@ -672,10 +738,10 @@ execution:{
      d:{what:"Joint targets straight to the controller.",
         hard:"The column this arrow crosses is empty. That gap is what structures 2 and 3 fill."}},
     {id:"e-policy-refine-q", from:"policy",fs:"right", to:"refine",ts:"left", fo:-16, to_:-16, v:["feedforward","closedloop"],
-     labBy:{feedforward:"q<sup>tar</sup><sub>t+N</sub>", closedloop:"q<sup>tar</sup><sub>t:t+N</sub>"},
+     lab:"q<sup>tar</sup><sub>t:t+N</sub>",
      d:{what:"The kinematic target. Roughly where the fingers should be."}},
     {id:"e-policy-refine-F", from:"policy",fs:"right", to:"refine",ts:"left", fo:16, to_:16, v:["feedforward","closedloop"],
-     labBy:{feedforward:"F<sup>tar</sup><sub>t+N</sub>", closedloop:"F<sup>tar</sup><sub>t:t+N</sub>"},
+     lab:"F<sup>tar</sup><sub>t:t+N</sub>",
      d:{what:"The force target. The profile the human produced on the same task, and the thing that decides the outcome."}},
     {id:"e-refine-pd", from:"refine",fs:"right", to:"pd",ts:"left", v:["feedforward","closedloop"],
      lab:"q′<sup>tar</sup><sub>t…</sub>",
@@ -693,10 +759,12 @@ execution:{
         hard:"This arrow is the whole difference between structures 2 and 3. Structure 2 knows the force target. Only this path lets the system know the force error."}},
     {id:"e-robot-policy", from:"robot",fs:"bottom", to:"policy",ts:"bottom", lane:2, labFrac:.86, v:["offline","feedforward","closedloop"],
      labBy:{offline:"q<sup>reading</sup><sub>t</sub>",
-            feedforward:"F<sup>reading</sup><sub>t</sub>, q<sup>reading</sup><sub>t</sub>",
+            feedforward:"F<sup>reading</sup><sub>t−1</sub>, q<sup>reading</sup><sub>t−1</sub>",
             closedloop:"F<sup>reading</sup><sub>t−1</sub>, q<sup>reading</sup><sub>t−1</sub>"},
      d:{what:"Observation feedback to the policy."},
-     dBy:{closedloop:{what:"Observation feedback to the policy.",
+     dBy:{feedforward:{what:"Observation feedback to the policy. Identical to structure 3.",
+       how:"Stamped t−1 because the policy runs on its own slow clock, one step behind the layer below it."},
+       closedloop:{what:"Observation feedback to the policy.",
        how:"Stamped t−1 here while the middle layer reads t…, which is the figure showing that the two loops run at different rates."}}}
   ]
 },
@@ -1257,6 +1325,29 @@ function buildNav(){
   const nav = document.createElement("nav");
   nav.className = "sidenav";
   nav.setAttribute("aria-label", "Sections");
+
+  /* the phone and tablet form of the same list: a floating button that
+     names the current section, and a menu hanging off it */
+  const menu = document.createElement("nav");
+  menu.className = "tocmenu";
+  menu.id = "toc-menu";
+  menu.setAttribute("aria-label", "Sections");
+  menu.innerHTML = '<p class="hd">Contents</p>';
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "tocbtn";
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", "toc-menu");
+  btn.innerHTML =
+    '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true" fill="currentColor">' +
+    '<circle cx="1.5" cy="1.7" r="1.5"/><rect x="5" y=".9" width="8" height="1.6" rx=".8"/>' +
+    '<circle cx="1.5" cy="6.5" r="1.5"/><rect x="5" y="5.7" width="8" height="1.6" rx=".8"/>' +
+    '<circle cx="1.5" cy="11.3" r="1.5"/><rect x="5" y="10.5" width="8" height="1.6" rx=".8"/>' +
+    '</svg><span class="cur">Contents</span>';
+  const veil = document.createElement("div");
+  veil.className = "tocveil";
+  const cur = btn.querySelector(".cur");
+
   const links = [];
   NAV.forEach(([id, label]) => {
     const target = document.getElementById(id);
@@ -1266,10 +1357,41 @@ function buildNav(){
     a.title = label;
     a.innerHTML = '<span class="dot"></span><span class="txt">' + label + '</span>';
     nav.appendChild(a);
-    links.push({a:a, target:target});
+    const b = document.createElement("a");
+    b.href = "#" + id;
+    b.innerHTML = '<span class="dot"></span><span>' + label + '</span>';
+    menu.appendChild(b);
+    links.push({a:a, b:b, label:label, target:target});
   });
   if (!links.length) return;
   document.body.appendChild(nav);
+  document.body.appendChild(veil);
+  document.body.appendChild(menu);
+  document.body.appendChild(btn);
+
+  function setOpen(on, moveFocus){
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+    [veil, menu].forEach(el => {
+      if (on) el.setAttribute("data-open", "1"); else el.removeAttribute("data-open");
+    });
+    /* only on keyboard activation: a tap should not leave a focus ring behind */
+    if (on && moveFocus){
+      const here = menu.querySelector('a[aria-current="true"]') || menu.querySelector("a");
+      if (here) here.focus({preventScroll:true});
+    }
+  }
+  btn.addEventListener("click", e => {
+    setOpen(btn.getAttribute("aria-expanded") !== "true", e.detail === 0);
+  });
+  veil.addEventListener("click", () => setOpen(false));
+  menu.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
+  addEventListener("keydown", e => {
+    if (e.key !== "Escape" || btn.getAttribute("aria-expanded") !== "true") return;
+    setOpen(false);
+    btn.focus({preventScroll:true});
+  });
+  /* the rail takes over at 1080px, so a menu left open there would linger */
+  addEventListener("resize", () => { if (innerWidth >= 1080) setOpen(false); });
 
   /* cheap enough to run straight off the scroll event: browsers already
      coalesce passive scroll listeners to one call per frame */
@@ -1277,15 +1399,18 @@ function buildNav(){
     /* a small fixed line, not a fraction of the viewport: short sections
        (Evaluation is ~180px) must still be able to claim it */
     const line = 88;
-    let cur = links[0];
-    links.forEach(l => { if (l.target.getBoundingClientRect().top <= line) cur = l; });
+    let now = links[0];
+    links.forEach(l => { if (l.target.getBoundingClientRect().top <= line) now = l; });
     /* the last section is often too short to ever cross the line */
     if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4)
-      cur = links[links.length - 1];
+      now = links[links.length - 1];
     links.forEach(l => {
-      if (l === cur) l.a.setAttribute("aria-current", "true");
-      else l.a.removeAttribute("aria-current");
+      [l.a, l.b].forEach(el => {
+        if (l === now) el.setAttribute("aria-current", "true");
+        else el.removeAttribute("aria-current");
+      });
     });
+    cur.textContent = now.label;
   }
   addEventListener("scroll", mark, {passive:true});
   addEventListener("resize", mark);
