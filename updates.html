@@ -56,6 +56,21 @@ img,video{max-width:100%; height:auto; border-radius:9px}
 .entry h3{font-size:16.5px; margin:22px 0 6px}
 .entry .todo{color:var(--soft); font-style:italic; font-size:14.5px}
 
+/* result videos: two per row on a desktop, one on a phone */
+.entry .note{margin:0 0 18px}
+.entry .rows{margin:0 0 22px; padding:14px 18px; background:var(--grey);
+             border:1px solid var(--rule2); border-left:3px solid var(--red); border-radius:9px;
+             font-size:15px}
+.entry .rows p{margin:0 0 4px}
+.entry .rows p:last-child{margin:0}
+.entry .rows b{color:var(--head); font-weight:600}
+.vgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:18px 20px; margin:12px 0 8px}
+.vgrid figure{margin:0}
+.vgrid video{display:block; width:100%; height:auto; background:#fff;
+             border:1px solid var(--rule2); border-radius:9px}
+.vgrid figcaption{font-size:13px; color:var(--soft); margin-top:6px; font-variant-numeric:tabular-nums}
+@media (max-width:760px){.vgrid{grid-template-columns:1fr}}
+
 @media (max-width:760px){
   body{font-size:15.5px; line-height:1.6}
   .container{padding:0 18px}
@@ -91,7 +106,39 @@ img,video{max-width:100%; height:auto; border-radius:9px}
 
     <article class="entry" id="week-1">
       <div class="wk"><h2>Week 1</h2><span class="dt">Sep 7 &ndash; Sep 13, 2026</span></div>
-      <p class="todo">Nothing logged yet.</p>
+      <p class="note">Force-controller evaluation on the play2perfect assembly tasks. Twelve recorded
+      episodes, three per task, each replayed open loop three ways on the same clock. Every video below
+      stacks the three settings in one column, frame for frame, so the camera view and the per-fingertip
+      force curves (target dashed, measured solid, red cursor = current time) can be compared at the same instant.</p>
+      <div class="rows">
+        <p><b>A &middot; Original action replay.</b> The recorded motor commands replayed exactly, no force law. The reference.</p>
+        <p><b>B &middot; State-only replay.</b> The recorded reached joint states replayed, no force law.</p>
+        <p><b>C &middot; State replay + force law.</b> The recorded reached joint states with the task-space force law on.</p>
+      </div>
+      <h3>Beam assembly, step 1</h3>
+      <div class="vgrid">
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_211911_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_211911</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_212007_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212007</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_212047_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212047</figcaption></figure>
+      </div>
+      <h3>Beam assembly, step 2</h3>
+      <div class="vgrid">
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212128_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_212128</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212210_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212210</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212322_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212322</figcaption></figure>
+      </div>
+      <h3>Screwing</h3>
+      <div class="vgrid">
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212402_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_212402</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212458_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212458</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212556_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212556</figcaption></figure>
+      </div>
+      <h3>Tight insertion</h3>
+      <div class="vgrid">
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211656_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_211656</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211739_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_211739</figcaption></figure>
+        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211828_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_211828</figcaption></figure>
+      </div>
     </article>
 
   </div>
