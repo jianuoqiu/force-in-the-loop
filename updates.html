@@ -203,25 +203,16 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
         <details class="settings" open>
           <summary>Experiment settings</summary>
           <dl>
-            <dt>Policy</dt><dd>BC checkpoint with a <b>point-cloud</b> encoder: 4,096 XYZ points from one fixed camera, no colour, no augmentation,
-              plus a causal history of measured joint motion, fingertip force and contact. Three training seeds; the seed with the best validation score is shown.
-              This is the same checkpoint that runs closed loop in Result 2. An RGB variant of the same architecture is compared in the tables below.</dd>
-            <dt>Forecast</dt><dd>One forecast = <b>16 future states at 60 Hz</b>, i.e. 267 ms ahead. Each row holds the measured joint positions
-              (7 arm + 22 hand), a force vector per fingertip (5), and a contact probability and contact location per fingertip.
-              A new forecast is made every second state, because the camera runs at 30 Hz.</dd>
-            <dt>2 steps vs 16 steps</dt><dd>Both columns of the overlay come from the <b>same forecast</b>; there is no training difference.
-              The left column draws the forecast's 2nd row, 33 ms ahead, the freshest prediction available at a camera frame.
-              The right column draws its 16th row, 267 ms ahead, on the frame 233 ms later that it refers to. The time-series plot
-              likewise shows the 1-step and 16-step rows of successive forecasts. The tables report the error at every step of the horizon.</dd>
-            <dt>Data</dt><dd>Four tasks, each with 40 training, 5 validation and 5 test episodes recorded with the released play2perfect policies.
-              Labels are raw measured joint positions and raw contact flags; force labels are smoothed with a centered Savitzky&ndash;Golay(7,2) filter.
-              The test episodes had been training data for an earlier model version, so this is a retrospective split, not fresh data.</dd>
-            <dt>Evaluation</dt><dd><b>Teacher forced</b> on the 20 held-out test episodes, 3,778 observed states: the policy always sees the recorded observation,
-              and its forecast is compared with the recorded future. Nothing is executed, so no task success is claimed here. The overlay uses the
-              first test episode of each task; predicted contact offsets are drawn relative to the recorded future fingertip positions.</dd>
-            <dt>Metrics</dt><dd>Mean absolute error of arm and hand joints in rad; force error per XYZ component in N; contact F1 over fingertip&ndash;object pairs;
-              contact-location error in mm on true contacts. Headline numbers average the 16 steps and weight the four tasks equally.
-              <i>Hold</i> is the trivial predictor that repeats the current state.</dd>
+            <dt>Policy</dt><dd>Point-cloud BC checkpoint, seed 0, epoch 27 of 40, 3.7 M parameters. One network for all four tasks. RGB counterpart: ResNet18 encoder, 14.9 M parameters.</dd>
+            <dt>Visual input</dt><dd>4,096 XYZ points from one fixed camera at 30 Hz, no colour, no augmentation. RGB model: one 640&times;480 image.</dd>
+            <dt>State input, 60 Hz</dt><dd>29 joint positions (7 arm + 22 hand) &middot; joint velocities and 5 fingertip force vectors, causal EMA &middot; contact flags and locations, 5 fingertips &times; 3 objects &middot; 33 ms motion and force history &middot; task ID.</dd>
+            <dt>Output per call</dt><dd>16 future states at 60 Hz = 267 ms, all in one forward pass: joint positions [16&times;29], force vectors [16&times;5&times;3], contact probability and location per fingertip&ndash;object pair. No autoregression.</dd>
+            <dt>2 steps vs 16 steps</dt><dd>Rows 2 and 16 of the <b>same forecast</b>, each drawn on the frame it refers to. Not a training difference. Video shows row 2 (33 ms, the first camera frame); plot shows row 1 (17 ms).</dd>
+            <dt>Labels</dt><dd>Raw joint positions, raw contacts. Force vectors smoothed with centered Savitzky&ndash;Golay(7,2), offline only.</dd>
+            <dt>Data</dt><dd>200 play2perfect expert demos, 50 per task &rarr; 40 train / 5 validation / 5 test per task. Retrospective split: test episodes were training data for an earlier model version.</dd>
+            <dt>Training</dt><dd>40 epochs, 3 seeds, AdamW, batch 256, cosine schedule. Loss: L1 joints + L1 force + L1 contact location + weighted contact BCE + 0.2 &times; motion increment. Checkpoint = lowest validation score.</dd>
+            <dt>Evaluation</dt><dd>Teacher forced on the 20 test episodes, 3,778 states: every input recorded, nothing executed. <i>Hold</i> = repeat the current state. Overlay: first test episode per task, contact offsets anchored to the recorded fingertips.</dd>
+            <dt>Metrics</dt><dd>MAE of arm and hand joints, rad &middot; force per XYZ component, N &middot; contact F1 at threshold 0.5 &middot; contact location on true contacts, mm. Pooled over the 16 steps, tasks weighted equally.</dd>
           </dl>
         </details>
 
@@ -357,15 +348,15 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
         <details class="settings" open>
           <summary>Experiment settings</summary>
           <dl>
-            <dt>Policy</dt><dd>The point-cloud checkpoint of Result 1, unchanged. It sees only live observations: point cloud at 30 Hz, joint states, fingertip forces and contacts at 60 Hz. Nothing recorded is fed back.</dd>
-            <dt>Scene</dt><dd>play2perfect Isaac Lab tasks, the same environment the demonstrations were recorded in: KUKA iiwa14 with the Sharpa hand, no domain randomisation, 120 Hz physics, 60 Hz state, 30 Hz camera.</dd>
-            <dt>Start</dt><dd>Cold start from an environment reset with seed 20002, a seed never used for the dataset (collection used 1000 to 1080). The reset state is cached, and both variants are restored to it bit for bit before running.</dd>
-            <dt>Loop</dt><dd>Forecast every second state (30 Hz); the middle layer interpolates the 16-row chunk linearly at 120 Hz, adds a velocity feedforward so the PD does not lag the reference, clamps the target to joint limits, and sends joint-position targets to the same implicit PD actuators the replays used. No smoothing, no ensembling.</dd>
-            <dt>Variant A</dt><dd><b>State tracking only</b>, the null law: the predicted reached joint positions go straight to the PD. The predicted force targets are logged but not used.</dd>
-            <dt>Variant B</dt><dd><b>State + force tracking</b>, the task-space law: at 120 Hz the law compares each fingertip's predicted force target with the measured tactile force and adds a joint offset in the direction of the error (kp 0.3, ki 10, 20&deg; cone, offset clipped to 0.12 rad), plus a contact-point term. With the law off this reduces to variant A.</dd>
-            <dt>End</dt><dd>The environment's own logic: success = every insertion sub-goal reached and the retract completed; otherwise the episode ends on a 10 s no-progress timeout (601 frames).</dd>
-            <dt>Video</dt><dd>Camera on the left; on the right, per fingertip the predicted force target (dashed) against the measured force (solid), the red cursor at the current time, the live error, and the object height. The title bar states the task, seed, variant and the environment's verdict.</dd>
-            <dt>Shown episodes</dt><dd>Seed 20002 for tight insertion, beam assembly step 1 and screwing, the seed on which both variants make contact with the part. Beam assembly step 2, the continuation of step 1, is left out of the viewer but is in the table.</dd>
+            <dt>Policy</dt><dd>Same point-cloud checkpoint as Result 1. Live inputs only; nothing recorded is fed back.</dd>
+            <dt>Simulator</dt><dd>play2perfect Isaac Lab tasks, KUKA iiwa14 + Sharpa hand, no domain randomisation. 120 Hz physics, 60 Hz state, 30 Hz camera.</dd>
+            <dt>Start</dt><dd>Environment reset with seed 20002, never in the dataset (collection used 1000 to 1080). A and B restored to the same cached state, bit for bit.</dd>
+            <dt>Loop</dt><dd>Forecast every 2 states (30 Hz) &middot; execute rows 1 to 2 (33 ms), then re-plan &middot; linear interpolation at 120 Hz &middot; velocity feedforward &middot; targets clamped to joint limits &middot; no smoothing, no ensembling.</dd>
+            <dt>A, state only</dt><dd>Null law: predicted joint states straight to the PD. Force targets logged, unused.</dd>
+            <dt>B, state + force</dt><dd>Task-space law at 120 Hz: joint offset toward the predicted force target from the measured tactile force (kp 0.3, ki 10, 20&deg; cone, clip 0.12 rad) + contact-point term.</dd>
+            <dt>End</dt><dd>Success = all insertion sub-goals + retract. Otherwise 10 s no-progress timeout, 601 frames.</dd>
+            <dt>Video</dt><dd>Camera left. Right: per fingertip, predicted target dashed vs measured solid, time cursor, live error, object height.</dd>
+            <dt>Shown</dt><dd>Seed 20002 for tight insertion, beam assembly step 1, screwing: the seed where both variants touch the part. Beam step 2 in the table only.</dd>
           </dl>
         </details>
 
