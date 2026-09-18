@@ -64,12 +64,36 @@ img,video{max-width:100%; height:auto; border-radius:9px}
 .entry .rows p{margin:0 0 4px}
 .entry .rows p:last-child{margin:0}
 .entry .rows b{color:var(--head); font-weight:600}
-.vgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:18px 20px; margin:12px 0 8px}
-.vgrid figure{margin:0}
-.vgrid video{display:block; width:100%; height:auto; background:#fff;
-             border:1px solid var(--rule2); border-radius:9px}
-.vgrid figcaption{font-size:13px; color:var(--soft); margin-top:6px; font-variant-numeric:tabular-nums}
-@media (max-width:760px){.vgrid{grid-template-columns:1fr}}
+.picker{display:flex; align-items:center; gap:14px 22px; flex-wrap:wrap; margin:6px 0 16px}
+.picker label{display:inline-flex; align-items:center; gap:8px; font-size:14.5px; color:var(--soft)}
+.picker select{
+  font-family:var(--sans); font-size:15px; color:var(--head); background:#fff;
+  border:1.5px solid var(--rule2); border-radius:9px; padding:8px 34px 8px 12px; cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%237a7a7a' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.picker select:hover{border-color:#9aa3ad}
+.picker select:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+.pick-nav{display:inline-flex; gap:6px; margin-left:auto}
+.pick-nav button{
+  font-family:var(--sans); font-size:16px; line-height:1; color:var(--head); background:#fff;
+  border:1.5px solid var(--rule2); border-radius:9px; width:38px; height:38px; cursor:pointer;
+}
+.pick-nav button:hover{border-color:#9aa3ad}
+.pick-nav button:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+.viewer{margin:0}
+/* one video at a time, so it may load eagerly; sized to fit the viewport
+   height so all three rows are visible without scrolling */
+.viewer video{display:block; width:auto; height:auto; max-width:100%; max-height:calc(100vh - 120px);
+              margin:0 auto; background:#fff; border:1px solid var(--rule2); border-radius:9px}
+.viewer figcaption{font-size:13px; color:var(--soft); margin-top:8px; font-variant-numeric:tabular-nums}
+@media (max-width:760px){
+  .picker{gap:10px 14px}
+  .picker label{font-size:14px}
+  .picker select{font-size:14.5px; padding:7px 30px 7px 10px}
+  .pick-nav{margin-left:0}
+}
 
 @media (max-width:760px){
   body{font-size:15.5px; line-height:1.6}
@@ -117,30 +141,48 @@ img,video{max-width:100%; height:auto; border-radius:9px}
         <p><b>B &middot; State-only replay: no force tracking.</b> The recorded reached joint states replayed through the position layer alone.</p>
         <p><b>C &middot; State replay + force tracking.</b> Reached states served; the task-space force law supplies the grasp preload.</p>
       </div>
-      <h3>Beam assembly, step 1</h3>
-      <div class="vgrid">
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_211911_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_211911</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_212007_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212007</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step1_20260908_212047_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212047</figcaption></figure>
+      <div class="picker" role="group" aria-label="Choose a trial">
+        <label>Task <select id="pick-task"></select></label>
+        <label>Trial <select id="pick-trial"></select></label>
+        <span class="pick-nav"><button type="button" id="pick-prev" aria-label="Previous trial">&larr;</button><button type="button" id="pick-next" aria-label="Next trial">&rarr;</button></span>
       </div>
-      <h3>Beam assembly, step 2</h3>
-      <div class="vgrid">
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212128_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_212128</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212210_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212210</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/beam_assembly_step2_20260908_212322_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212322</figcaption></figure>
-      </div>
-      <h3>Screwing</h3>
-      <div class="vgrid">
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212402_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_212402</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212458_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_212458</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/screwing_20260908_212556_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_212556</figcaption></figure>
-      </div>
-      <h3>Tight insertion</h3>
-      <div class="vgrid">
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211656_ep0000.mp4"></video><figcaption>Episode 1 &middot; 20260908_211656</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211739_ep0000.mp4"></video><figcaption>Episode 2 &middot; 20260908_211739</figcaption></figure>
-        <figure><video controls preload="metadata" playsinline src="assets/updates/week1/tight_insertion_20260908_211828_ep0000.mp4"></video><figcaption>Episode 3 &middot; 20260908_211828</figcaption></figure>
-      </div>
+      <figure class="viewer">
+        <video id="viewer" controls preload="auto" playsinline></video>
+        <figcaption id="viewer-cap"></figcaption>
+      </figure>
+      <script>
+      (function(){
+      const TASKS = [
+        {id:"beam_assembly_step1", label:"Beam assembly, step 1", trials:[{stamp:"20260908_211911", src:"assets/updates/week1/beam_assembly_step1_20260908_211911_ep0000.mp4"}, {stamp:"20260908_212007", src:"assets/updates/week1/beam_assembly_step1_20260908_212007_ep0000.mp4"}, {stamp:"20260908_212047", src:"assets/updates/week1/beam_assembly_step1_20260908_212047_ep0000.mp4"}]},
+        {id:"beam_assembly_step2", label:"Beam assembly, step 2", trials:[{stamp:"20260908_212128", src:"assets/updates/week1/beam_assembly_step2_20260908_212128_ep0000.mp4"}, {stamp:"20260908_212210", src:"assets/updates/week1/beam_assembly_step2_20260908_212210_ep0000.mp4"}, {stamp:"20260908_212322", src:"assets/updates/week1/beam_assembly_step2_20260908_212322_ep0000.mp4"}]},
+        {id:"screwing", label:"Screwing", trials:[{stamp:"20260908_212402", src:"assets/updates/week1/screwing_20260908_212402_ep0000.mp4"}, {stamp:"20260908_212458", src:"assets/updates/week1/screwing_20260908_212458_ep0000.mp4"}, {stamp:"20260908_212556", src:"assets/updates/week1/screwing_20260908_212556_ep0000.mp4"}]},
+        {id:"tight_insertion", label:"Tight insertion", trials:[{stamp:"20260908_211656", src:"assets/updates/week1/tight_insertion_20260908_211656_ep0000.mp4"}, {stamp:"20260908_211739", src:"assets/updates/week1/tight_insertion_20260908_211739_ep0000.mp4"}, {stamp:"20260908_211828", src:"assets/updates/week1/tight_insertion_20260908_211828_ep0000.mp4"}]}
+      ];
+      const tSel = document.getElementById("pick-task"), eSel = document.getElementById("pick-trial");
+      const vid = document.getElementById("viewer"), cap = document.getElementById("viewer-cap");
+      TASKS.forEach((t, i) => tSel.add(new Option(t.label, i)));
+      function fillTrials(){
+        eSel.innerHTML = "";
+        TASKS[tSel.value].trials.forEach((tr, i) => eSel.add(new Option("Trial " + (i + 1) + "  \u00b7  " + tr.stamp, i)));
+      }
+      function show(){
+        const t = TASKS[tSel.value], tr = t.trials[eSel.value];
+        vid.pause(); vid.src = tr.src; vid.load();
+        cap.textContent = t.label + "  \u00b7  trial " + (Number(eSel.value) + 1) + " of " + t.trials.length + "  \u00b7  " + t.id + "_" + tr.stamp + "_ep0000";
+      }
+      function step(d){
+        let e = Number(eSel.value) + d, t = Number(tSel.value);
+        if (e < 0){ t = (t + TASKS.length - 1) % TASKS.length; tSel.value = t; fillTrials(); e = TASKS[t].trials.length - 1; }
+        else if (e >= TASKS[t].trials.length){ t = (t + 1) % TASKS.length; tSel.value = t; fillTrials(); e = 0; }
+        eSel.value = e; show();
+      }
+      tSel.addEventListener("change", () => { fillTrials(); show(); });
+      eSel.addEventListener("change", show);
+      document.getElementById("pick-prev").addEventListener("click", () => step(-1));
+      document.getElementById("pick-next").addEventListener("click", () => step(1));
+      fillTrials(); show();
+      })();
+      </script>
     </article>
 
   </div>
