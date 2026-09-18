@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="730" viewBox="0 0 1200 730" role="img" aria-labelledby="title desc">
+<title id="title">Actual RGB and XYZ BC policy architecture</title>
+<desc id="desc">One visual encoder produces 512 features. A measured state encoder produces 256 features and a task embedding produces 32. Concatenated 800 features feed a 1024 by 1024 MLP producing 16 times 104 outputs, then physical decoding.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="#64748b"/></marker></defs>
+<rect width="1200" height="730" fill="white"/>
+<g font-family="Arial, sans-serif" fill="#152238">
+<text x="35" y="38" font-size="24" font-weight="bold">Selected BC architecture: RGB or XYZ visual branch</text>
+<text x="35" y="65" font-size="16">Batch dimension omitted · separate trained models · same nonvisual architecture</text>
+<rect x="35" y="100" width="350" height="112" rx="10" fill="#e0f2fe" stroke="#94a3b8"/>
+<text x="50" y="128" font-size="18" font-weight="bold">RGB encoder</text>
+<text x="50" y="154" font-size="15">RGB 480×640×3 → resize/crop</text>
+<text x="50" y="178" font-size="15">ResNet18 → global pooling</text>
+<text x="50" y="202" font-size="15">512 visual features</text>
+<rect x="35" y="235" width="350" height="112" rx="10" fill="#dcfce7" stroke="#94a3b8"/>
+<text x="50" y="263" font-size="18" font-weight="bold">XYZ encoder</text>
+<text x="50" y="289" font-size="15">4096×3 world XYZ → normalization</text>
+<text x="50" y="313" font-size="15">Shared 3→64→128→256 point MLP</text>
+<text x="50" y="337" font-size="15">Max + mean pooling → 512</text>
+<text x="145" y="229" font-size="15" font-weight="bold">OR (one encoder per checkpoint)</text>
+<rect x="425" y="100" width="345" height="112" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="440" y="128" font-size="18" font-weight="bold">Measured-state encoder</text>
+<text x="440" y="154" font-size="15">q29 + qd29 + f15 + history44</text>
+<text x="440" y="178" font-size="15">contact offsets45 + flags15 = 177</text>
+<text x="440" y="202" font-size="15">Linear177→256, LN, GELU, Linear256</text>
+<rect x="810" y="100" width="355" height="112" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="825" y="128" font-size="18" font-weight="bold">Task embedding</text>
+<text x="825" y="154" font-size="15">Task ID 0 / 1 / 2 / 3</text>
+<text x="825" y="178" font-size="15">Embedding table 4×32</text>
+<text x="825" y="202" font-size="15">32 task features</text>
+<rect x="425" y="270" width="740" height="80" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="440" y="298" font-size="18" font-weight="bold">Feature concatenation</text>
+<text x="440" y="324" font-size="15">512 visual + 256 measured state + 32 task = 800 features</text>
+<path d="M385,160 L425,292" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M385,290 L425,318" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M595,212 L595,270" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M985,212 L985,270" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="425" y="390" width="740" height="106" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="440" y="418" font-size="18" font-weight="bold">Shared forecast MLP within each model</text>
+<text x="440" y="444" font-size="15">Linear800→1024 → LayerNorm → GELU → Dropout(0.1)</text>
+<text x="440" y="468" font-size="15">Linear1024→1024 → LayerNorm → GELU → Dropout(0.1)</text>
+<text x="440" y="492" font-size="15">Linear1024→1664 → reshape 16×104</text>
+<path d="M795,350 L795,390" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="390" width="350" height="106" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="50" y="418" font-size="18" font-weight="bold">No visual sequence encoder</text>
+<text x="50" y="444" font-size="15">One current image or cloud</text>
+<text x="50" y="468" font-size="15">Short sensor history: s minus s−2</text>
+<text x="50" y="492" font-size="15">Current contact persistence priors</text>
+<rect x="35" y="550" width="1130" height="100" rx="10" fill="#eef5f7" stroke="#94a3b8"/>
+<text x="50" y="578" font-size="18" font-weight="bold">Physical-unit forecast: 16 future states at 60 Hz (+16.7 to +266.7 ms)</text>
+<text x="50" y="604" font-size="15">Each row: 29 joint positions (rad) + 15 force components (N) + 45 contact offsets (m) + 15 contact probabilities</text>
+<text x="50" y="628" font-size="15">Joint/force outputs decode normalized residuals; contact outputs add current-contact priors before decoding</text>
+<path d="M795,496 L795,550" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="35" y="692" font-size="17">Suggested execution: use rows 1–2, acquire a new observation, and replan. This controller schedule is separate from training.</text>
+</g></svg>

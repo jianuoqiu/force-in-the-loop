@@ -101,6 +101,8 @@ img,video{max-width:100%; height:auto; border-radius:9px}
 .result h3 .rn{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
                color:var(--red); background:#fdf8f8; border:1px solid #f0dada; border-radius:6px; padding:2px 8px; margin-right:10px; vertical-align:2px}
 .result h4{font-size:16px; color:var(--head); margin:26px 0 8px}
+.result.arch{margin-top:22px; padding-top:22px}
+.archfig{margin:14px 0 0; padding:10px 10px 8px; background:#fff; border:1px solid var(--rule2); border-radius:9px}
 .result .lead{font-size:16px; margin:0 0 14px}
 details.settings{margin:0 0 18px; padding:0 18px; background:var(--grey); border:1px solid var(--rule2); border-radius:9px}
 details.settings summary{cursor:pointer; padding:12px 0; font-weight:600; color:var(--head); list-style:none; display:flex; align-items:center; gap:8px}
@@ -190,6 +192,17 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
       <b>offline</b>, on held-out recordings. Result 2 runs the same policy <b>closed loop</b> in the simulator
       through the hybrid force controller, once tracking the predicted states only and once adding the
       predicted force targets through the force law.</p>
+
+      <section class="result arch" id="w3-arch">
+        <h3>The policy under test</h3>
+        <p class="lead">A feed-forward behaviour-cloning network, one model for all four tasks. From one camera observation, the measured
+        robot state and a task ID it predicts a chunk of <b>16 future measured states</b>: joint positions, fingertip force vectors and
+        contacts. It outputs references for the controller, not motor commands; it was never trained on expert actions.</p>
+        <figure class="archfig">
+          <img src="assets/updates/week3/offline/architecture.svg" alt="BC policy architecture: an RGB or XYZ visual encoder (512 features), a measured-state encoder (256) and a task embedding (32) are concatenated into 800 features, passed through a 1024-1024 MLP, and reshaped to 16 rows of 104 outputs that decode to joint positions, forces, contact offsets and contact probabilities" style="display:block;width:100%;height:auto">
+          <figcaption class="tnote">Diagram from the checkpoint report, verified against the exported weights. Left: the two alternative visual encoders, one per checkpoint. Bottom: the 16-row forecast the controller consumes.</figcaption>
+        </figure>
+      </section>
 
       <!-- ─────────────── Result 1: offline force / contact prediction ─────────────── -->
       <section class="result" id="w3-r1">
