@@ -95,6 +95,55 @@ img,video{max-width:100%; height:auto; border-radius:9px}
   .pick-nav{margin-left:0}
 }
 
+/* ── week 3: results with settings, pickers and tables ─────────────── */
+.result{margin:30px 0 0; padding-top:26px; border-top:1px dashed var(--rule2)}
+.result h3{font-size:19px; margin:0 0 10px}
+.result h3 .rn{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+               color:var(--red); background:#fdf8f8; border:1px solid #f0dada; border-radius:6px; padding:2px 8px; margin-right:10px; vertical-align:2px}
+.result h4{font-size:16px; color:var(--head); margin:26px 0 8px}
+.result .lead{font-size:16px; margin:0 0 14px}
+details.settings{margin:0 0 18px; padding:0 18px; background:var(--grey); border:1px solid var(--rule2); border-radius:9px}
+details.settings summary{cursor:pointer; padding:12px 0; font-weight:600; color:var(--head); list-style:none; display:flex; align-items:center; gap:8px}
+details.settings summary::-webkit-details-marker{display:none}
+details.settings summary::before{content:""; width:7px; height:7px; border-right:1.5px solid var(--soft); border-bottom:1.5px solid var(--soft);
+                                 transform:rotate(-45deg); transition:transform .15s; margin-right:2px}
+details.settings[open] summary::before{transform:rotate(45deg)}
+details.settings dl{display:grid; grid-template-columns:max-content 1fr; gap:8px 18px; margin:0; padding:2px 0 16px; font-size:14.5px; line-height:1.55}
+details.settings dt{color:var(--head); font-weight:600; white-space:nowrap}
+details.settings dd{margin:0}
+details.settings dd b{color:var(--head); font-weight:600}
+.duo{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; align-items:start; margin:12px 0 4px}
+.duo figure{margin:0}
+.duo video,.duo img{display:block; width:100%; height:auto; background:#fff; border:1px solid var(--rule2); border-radius:9px}
+.duo figcaption,.stack figcaption{font-size:13px; color:var(--soft); margin-top:6px; line-height:1.45}
+.stack{display:grid; gap:14px; margin:12px 0 4px}
+.stack figure{margin:0}
+.stack .lbl{display:flex; align-items:baseline; gap:10px; font-size:14.5px; color:var(--head); font-weight:600; margin:0 0 6px}
+.stack .lbl .k{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px;
+               font-size:12.5px; font-weight:700; color:#fff; background:var(--head)}
+.stack .lbl .k.b{background:var(--red)}
+.stack .lbl .sub{font-weight:400; color:var(--soft); font-size:13.5px}
+.stack video{display:block; width:100%; height:auto; background:#fff; border:1px solid var(--rule2); border-radius:9px}
+.tblwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:8px 0 6px}
+table.res{border-collapse:collapse; width:100%; font-size:13.5px; line-height:1.4; min-width:520px}
+table.res th,table.res td{padding:7px 10px; border-bottom:1px solid var(--rule); text-align:right; vertical-align:top; font-variant-numeric:tabular-nums}
+table.res th{color:var(--head); font-weight:600; border-bottom:1px solid var(--rule2)}
+table.res th:first-child,table.res td:first-child{text-align:left}
+table.res th[scope="row"]{color:var(--head); font-weight:600; white-space:nowrap}
+table.res tr.hi td,table.res tr.hi th{background:#fdf8f8}
+table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
+.tnote{font-size:13px; color:var(--soft); margin:4px 0 0; line-height:1.5}
+.callout{margin:16px 0 0; padding:14px 18px; background:#fbfaf7; border:1px solid var(--rule2); border-left:3px solid var(--red); border-radius:9px; font-size:15px}
+.callout p{margin:0 0 8px}
+.callout p:last-child{margin:0}
+.callout b{color:var(--head)}
+@media (max-width:760px){
+  .duo{grid-template-columns:1fr}
+  details.settings dl{grid-template-columns:1fr; gap:2px 0}
+  details.settings dt{margin-top:8px}
+  .result h3{font-size:17.5px}
+}
+
 @media (max-width:760px){
   body{font-size:15.5px; line-height:1.6}
   .container{padding:0 18px}
@@ -128,6 +177,198 @@ img,video{max-width:100%; height:auto; border-radius:9px}
          list (newest first), bump the id and the title, set the dates, and
          replace the placeholder paragraph with notes. -->
 
+    <article class="entry" id="week-3">
+      <div class="wk"><h2>Week 3</h2><span class="dt">Sep 14 &ndash; Sep 20, 2026</span></div>
+      <p class="note">Two results this week, both from the behaviour-cloning (BC) policy trained on the play2perfect
+      assembly demonstrations. Result 1 measures how well the policy predicts fingertip contact and force
+      <b>offline</b>, on held-out recordings. Result 2 runs the same policy <b>closed loop</b> in the simulator
+      through the hybrid force controller, once tracking the predicted states only and once adding the
+      predicted force targets through the force law.</p>
+
+      <!-- ─────────────── Result 1: offline force / contact prediction ─────────────── -->
+      <section class="result" id="w3-r1">
+        <h3><span class="rn">Result 1</span>Offline force and contact prediction</h3>
+        <p class="lead">Given a recorded observation, the policy forecasts the next 267 ms: where every joint will be,
+        which fingertips will be in contact, where on the fingertip, and with what force vector. The overlay video
+        draws the forecast on the recorded camera frame it refers to, <span style="color:#c00000;font-weight:600">red</span>
+        for predicted contact and force, <span style="color:#4ea72e;font-weight:600">green</span> for the recorded truth.
+        The plot beside it shows the same episode as time series.</p>
+
+        <details class="settings" open>
+          <summary>Experiment settings</summary>
+          <dl>
+            <dt>Policy</dt><dd>BC checkpoint with a <b>point-cloud</b> encoder: 4,096 XYZ points from one fixed camera, no colour, no augmentation,
+              plus a causal history of measured joint motion, fingertip force and contact. Three training seeds; the seed with the best validation score is shown.
+              This is the same checkpoint that runs closed loop in Result 2. An RGB variant of the same architecture is compared in the tables below.</dd>
+            <dt>Forecast</dt><dd>One forecast = <b>16 future states at 60 Hz</b>, i.e. 267 ms ahead. Each row holds the measured joint positions
+              (7 arm + 22 hand), a force vector per fingertip (5), and a contact probability and contact location per fingertip.
+              A new forecast is made every second state, because the camera runs at 30 Hz.</dd>
+            <dt>2 steps vs 16 steps</dt><dd>Both columns of the overlay come from the <b>same forecast</b>; there is no training difference.
+              The left column draws the forecast's 2nd row, 33 ms ahead, the freshest prediction available at a camera frame.
+              The right column draws its 16th row, 267 ms ahead, on the frame 233 ms later that it refers to. The time-series plot
+              likewise shows the 1-step and 16-step rows of successive forecasts. The tables report the error at every step of the horizon.</dd>
+            <dt>Data</dt><dd>Four tasks, each with 40 training, 5 validation and 5 test episodes recorded with the released play2perfect policies.
+              Labels are raw measured joint positions and raw contact flags; force labels are smoothed with a centered Savitzky&ndash;Golay(7,2) filter.
+              The test episodes had been training data for an earlier model version, so this is a retrospective split, not fresh data.</dd>
+            <dt>Evaluation</dt><dd><b>Teacher forced</b> on the 20 held-out test episodes, 3,778 observed states: the policy always sees the recorded observation,
+              and its forecast is compared with the recorded future. Nothing is executed, so no task success is claimed here. The overlay uses the
+              first test episode of each task; predicted contact offsets are drawn relative to the recorded future fingertip positions.</dd>
+            <dt>Metrics</dt><dd>Mean absolute error of arm and hand joints in rad; force error per XYZ component in N; contact F1 over fingertip&ndash;object pairs;
+              contact-location error in mm on true contacts. Headline numbers average the 16 steps and weight the four tasks equally.
+              <i>Hold</i> is the trivial predictor that repeats the current state.</dd>
+          </dl>
+        </details>
+
+        <div class="picker" id="w3r1-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <div class="duo">
+          <figure>
+            <video class="pk-video" controls preload="auto" playsinline loop></video>
+            <figcaption class="pk-cap1">Overlay on the recorded test episode. Top row: full camera view; bottom row: zoom. Left: forecast 2 steps (33 ms) ahead; right: 16 steps (267 ms) ahead. Arrows are force vectors, markers are contact points.</figcaption>
+          </figure>
+          <figure>
+            <a class="pk-imglink" href="#" target="_blank" rel="noopener"><img class="pk-img" alt="Time series of joints, fingertip force magnitudes and contact probabilities for the selected task"></a>
+            <figcaption>Same episode as time series: two arm and two hand joints, fingertip force magnitudes, and contact probability per fingertip&ndash;object pair. Black or thick = recorded; thin solid = 1 step ahead; dashed = 16 steps ahead. Click to open full size.</figcaption>
+          </figure>
+        </div>
+
+        <h4>How accurate is the forecast?</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>task</th><th>arm, rad</th><th>hand, rad</th><th>force, N</th><th>contact F1</th><th>contact location, mm</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Tight insertion</th><td>0.0070</td><td>0.067</td><td>0.73</td><td>0.861</td><td>5.2</td></tr>
+            <tr><th scope="row">Beam assembly, step 1</th><td>0.0058</td><td>0.047</td><td>0.78</td><td>0.915</td><td>4.5</td></tr>
+            <tr><th scope="row">Beam assembly, step 2</th><td>0.0123</td><td>0.060</td><td>0.93</td><td>0.830</td><td>6.5</td></tr>
+            <tr><th scope="row">Screwing</th><td>0.0052</td><td>0.041</td><td>0.59</td><td>0.895</td><td>4.4</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Point-cloud checkpoint on the five held-out test episodes per task, averaged over the 16-step horizon. Screwing is the easiest task on every metric, beam assembly step 2 the hardest.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>error vs. horizon</th><th>1 step, 17 ms</th><th>2 steps, 33 ms</th><th>8 steps, 133 ms</th><th>16 steps, 267 ms</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">arm, rad</th><td>0.0010</td><td>0.0018</td><td>0.0071</td><td>0.0145</td></tr>
+            <tr class="dim"><th scope="row">&nbsp;&nbsp;hold</th><td>0.0023</td><td>0.0043</td><td>0.0154</td><td>0.0281</td></tr>
+            <tr><th scope="row">hand, rad</th><td>0.0069</td><td>0.0140</td><td>0.0547</td><td>0.0923</td></tr>
+            <tr class="dim"><th scope="row">&nbsp;&nbsp;hold</th><td>0.0131</td><td>0.0256</td><td>0.0859</td><td>0.1288</td></tr>
+            <tr><th scope="row">force, N</th><td>0.35</td><td>0.47</td><td>0.79</td><td>0.98</td></tr>
+            <tr class="dim"><th scope="row">&nbsp;&nbsp;hold</th><td>0.36</td><td>0.50</td><td>0.89</td><td>1.11</td></tr>
+            <tr><th scope="row">contact F1</th><td>0.966</td><td>0.943</td><td>0.872</td><td>0.811</td></tr>
+            <tr class="dim"><th scope="row">&nbsp;&nbsp;hold</th><td>0.971</td><td>0.946</td><td>0.837</td><td>0.780</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Error grows with the lead time, as expected. Joint forecasts beat the hold predictor by about 2&times; on the arm and 30 % on the hand at 267 ms.
+        Force and contact forecasts beat it by much less: at 267 ms the force error is 12 % below simply holding the current reading.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>true force magnitude</th><th>targets</th><th>vector error, N</th><th>magnitude bias, N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">0 to 0.5 N (no or light touch)</th><td>11,385</td><td>0.71</td><td>+0.69</td></tr>
+            <tr><th scope="row">0.5 to 2 N</th><td>1,427</td><td>1.70</td><td>+0.55</td></tr>
+            <tr><th scope="row">2 to 5 N</th><td>1,925</td><td>2.61</td><td>&minus;0.74</td></tr>
+            <tr class="hi"><th scope="row">5 to 10 N</th><td>1,773</td><td>4.33</td><td>&minus;2.66</td></tr>
+            <tr class="hi"><th scope="row">10 to 20 N</th><td>1,084</td><td>6.57</td><td>&minus;4.54</td></tr>
+            <tr class="hi"><th scope="row">above 20 N</th><td>561</td><td>8.31</td><td>&minus;4.49</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Force error binned by the true force at the target step, point-cloud checkpoint, all horizons pooled. The forecast is accurate for light
+        contact and <b>systematically under-predicts firm grasps</b>: above 5 N the predicted magnitude is 2.7 to 4.5 N too low, roughly 30 to 45 % of the target.
+        Contact onsets are detected in 63 % of forecast windows, 46 % within 50 ms, with a 1.4 % false-alarm rate.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>model, 3 seeds</th><th>arm, rad</th><th>hand, rad</th><th>force, N</th><th>contact F1 at 267 ms</th><th>contact location, mm</th><th>onsets within 50 ms</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">RGB, original head</th><td>0.0079</td><td>0.0578</td><td>0.776</td><td>0.804</td><td>6.0</td><td>42 %</td></tr>
+            <tr><th scope="row">RGB, with history</th><td>0.0078</td><td>0.0575</td><td>0.790</td><td>0.813</td><td>5.3</td><td>40 %</td></tr>
+            <tr class="hi"><th scope="row">Point cloud, with history</th><td>0.0075</td><td>0.0534</td><td>0.755</td><td>0.813</td><td>5.1</td><td>47 %</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Mean over three training seeds; seed-to-seed spread is below 0.001 rad, 0.007 N and 0.007 F1. Replacing the image encoder with the point-cloud
+        encoder lowers arm, hand and force error by 4 to 7 % with paired confidence intervals that exclude zero; contact F1 is unchanged. Adding history to the RGB model
+        changed little. Checkpoints were chosen on validation only.</p>
+
+        <figure style="margin:18px 0 0">
+          <img src="assets/updates/week3/offline/horizons.png" alt="Forecast error versus horizon for the RGB-with-history and point-cloud models against hold and constant-velocity baselines" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption class="tnote">Error against forecast horizon on the test episodes, one curve per model, with the hold and constant-velocity predictors for reference. Shading is the spread over training seeds.</figcaption>
+        </figure>
+      </section>
+
+      <!-- ─────────────── Result 2: closed-loop rollouts ─────────────── -->
+      <section class="result" id="w3-r2">
+        <h3><span class="rn">Result 2</span>Closed-loop rollouts: state tracking with and without the force law</h3>
+        <p class="lead">The same point-cloud policy drives the robot in the simulator through the hybrid controller. Two variants start from the
+        bit-identical initial state: <b>A</b> tracks only the predicted joint states, <b>B</b> also tracks the predicted fingertip force targets
+        through the task-space force law. One episode per task is shown; the summary below covers the full evaluation grid.</p>
+
+        <details class="settings" open>
+          <summary>Experiment settings</summary>
+          <dl>
+            <dt>Policy</dt><dd>The point-cloud checkpoint of Result 1, unchanged. It sees only live observations: point cloud at 30 Hz, joint states, fingertip forces and contacts at 60 Hz. Nothing recorded is fed back.</dd>
+            <dt>Scene</dt><dd>play2perfect Isaac Lab tasks, the same environment the demonstrations were recorded in: KUKA iiwa14 with the Sharpa hand, no domain randomisation, 120 Hz physics, 60 Hz state, 30 Hz camera.</dd>
+            <dt>Start</dt><dd>Cold start from an environment reset with seed 20002, a seed never used for the dataset (collection used 1000 to 1080). The reset state is cached, and both variants are restored to it bit for bit before running.</dd>
+            <dt>Loop</dt><dd>Forecast every second state (30 Hz); the middle layer interpolates the 16-row chunk linearly at 120 Hz, adds a velocity feedforward so the PD does not lag the reference, clamps the target to joint limits, and sends joint-position targets to the same implicit PD actuators the replays used. No smoothing, no ensembling.</dd>
+            <dt>Variant A</dt><dd><b>State tracking only</b>, the null law: the predicted reached joint positions go straight to the PD. The predicted force targets are logged but not used.</dd>
+            <dt>Variant B</dt><dd><b>State + force tracking</b>, the task-space law: at 120 Hz the law compares each fingertip's predicted force target with the measured tactile force and adds a joint offset in the direction of the error (kp 0.3, ki 10, 20&deg; cone, offset clipped to 0.12 rad), plus a contact-point term. With the law off this reduces to variant A.</dd>
+            <dt>End</dt><dd>The environment's own logic: success = every insertion sub-goal reached and the retract completed; otherwise the episode ends on a 10 s no-progress timeout (601 frames).</dd>
+            <dt>Video</dt><dd>Camera on the left; on the right, per fingertip the predicted force target (dashed) against the measured force (solid), the red cursor at the current time, the live error, and the object height. The title bar states the task, seed, variant and the environment's verdict.</dd>
+            <dt>Shown episodes</dt><dd>Seed 20002 for tight insertion, beam assembly step 1 and screwing, the seed on which both variants make contact with the part. Beam assembly step 2, the continuation of step 1, is left out of the viewer but is in the table.</dd>
+          </dl>
+        </details>
+
+        <div class="picker" id="w3r2-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <div class="stack">
+          <figure>
+            <p class="lbl"><span class="k">A</span>State tracking only <span class="sub">null law: predicted joint states to the PD</span></p>
+            <video class="pk-video-a" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">B</span>State + force tracking <span class="sub">task-space law: force targets tracked from the tactile pads</span></p>
+            <video class="pk-video-b" controls preload="auto" playsinline></video>
+            <figcaption class="pk-cap2"></figcaption>
+          </figure>
+        </div>
+
+        <h4>Outcome</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>shown episode, seed 20002</th><th>variant</th><th>result</th><th>closest keypoint, mm</th><th>peak force on part, N</th><th>force-tracking bias, N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" rowspan="2">Tight insertion</th><td>A, state only</td><td>timeout, 0/2 goals</td><td>163</td><td>5.4</td><td>&minus;0.67</td></tr>
+            <tr><td>B, state + force</td><td>timeout, 0/2 goals</td><td>163</td><td>5.3</td><td>&minus;0.63</td></tr>
+            <tr><th scope="row" rowspan="2">Beam assembly, step 1</th><td>A, state only</td><td>timeout, 0/2 goals</td><td>236</td><td>7.9</td><td>&minus;0.74</td></tr>
+            <tr><td>B, state + force</td><td>timeout, 0/2 goals</td><td>236</td><td>10.4</td><td>&minus;1.23</td></tr>
+            <tr><th scope="row" rowspan="2">Screwing</th><td>A, state only</td><td>timeout, 0/10 goals</td><td>194</td><td>5.2</td><td>&minus;0.44</td></tr>
+            <tr><td>B, state + force</td><td>timeout, 0/10 goals</td><td>234</td><td>26.5</td><td>&minus;0.58</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Closest keypoint = the smallest distance any part keypoint reached to its goal pose during the episode. Force-tracking bias = mean of measured minus target force while a fingertip is engaged, worst fingertip.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>full grid</th><th>episodes</th><th>successes</th><th>sub-goals reached</th><th>ended by</th><th>closest keypoint, cm</th><th>part touched above 2 N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">4 tasks &times; 5 seeds &times; {RGB, point cloud} &times; {A, B}</th><td>80</td><td>0</td><td>0</td><td>timeout, 80 of 80</td><td>15 to 37</td><td>41 of 80</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Seeds 20000 to 20004, identical initial states across the four conditions of each seed. With five episodes per cell, the 95 % interval on a 0/5 still reaches 43 %, so the grid cannot rank the conditions; it only shows that none of them works yet.</p>
+
+        <div class="callout">
+          <p><b>What the rollouts show.</b> The part is never grasped. Within the first second the object height drops by 8 to 10 cm in every episode: the hand does not
+          close fast enough, the part slips out, and the rest of the episode is spent near the table. Fingers do touch the part in half the episodes, and with the
+          force law on the fingertips press harder on it (screwing above: 27 N against 5 N), but never hold it.</p>
+          <p><b>Where the error is.</b> The controller follows the policy's reference closely: 6 mrad mean hand error, under 1 mrad on the arm, and the force law
+          tracks its targets to within 1 N. The reference itself is wrong. From rest the policy under-predicts how fast the hand should close, and once forecasts
+          build on the policy's own states the arm reference drifts 0.18 rad from the recording within 0.65 s. This is closed-loop covariate shift of the BC policy.
+          The offline under-prediction of firm grasps in Result 1 points the same way: the force targets the law is asked to track are themselves too small.</p>
+          <p><b>Checks that passed.</b> Replaying the recorded commands through the same live pipeline completes the tasks, and the live policy inputs match the
+          dataset files bit for bit, so the wiring is not the cause. The velocity feedforward halves the arm tracking error but does not change the outcome.</p>
+        </div>
+      </section>
+    </article>
+
     <article class="entry" id="weeks-1-2">
       <div class="wk"><h2>Weeks 1&ndash;2</h2><span class="dt">Aug 31 &ndash; Sep 13, 2026</span></div>
       <p class="note">Two weeks of work on the force controller, ending in an evaluation on the play2perfect
@@ -150,6 +391,44 @@ img,video{max-width:100%; height:auto; border-radius:9px}
         <video id="viewer" controls preload="auto" playsinline></video>
         <figcaption id="viewer-cap"></figcaption>
       </figure>
+      <script>
+      /* week 3 pickers: a task <select> with prev/next that swaps sources */
+      (function(){
+        function picker(rootId, items, show){
+          const root = document.getElementById(rootId);
+          const sel = root.querySelector(".pk-task");
+          items.forEach((it, i) => sel.add(new Option(it.label, i)));
+          const go = () => show(items[Number(sel.value)]);
+          sel.addEventListener("change", go);
+          root.querySelector(".pk-prev").addEventListener("click", () => { sel.value = (Number(sel.value) + items.length - 1) % items.length; go(); });
+          root.querySelector(".pk-next").addEventListener("click", () => { sel.value = (Number(sel.value) + 1) % items.length; go(); });
+          go();
+        }
+        /* result 1: overlay video + time-series plot, four tasks */
+        (function(){
+          const r1 = document.getElementById("w3-r1");
+          const vid = r1.querySelector(".pk-video"), img = r1.querySelector(".pk-img"), lnk = r1.querySelector(".pk-imglink");
+          const T = [{id:"tight_insertion", label:"Tight insertion"},{id:"beam_assembly_step1", label:"Beam assembly, step 1"},{id:"beam_assembly_step2", label:"Beam assembly, step 2"},{id:"screwing", label:"Screwing"}];
+          picker("w3r1-pick", T, t => {
+            vid.pause(); vid.src = "assets/updates/week3/offline/overlay_" + t.id + ".mp4"; vid.load();
+            img.src = "assets/updates/week3/offline/timeseries_" + t.id + ".png"; lnk.href = img.src;
+            img.alt = "Time series for " + t.label;
+          });
+        })();
+        /* result 2: two stacked rollouts, A and B, three tasks */
+        (function(){
+          const r2 = document.getElementById("w3-r2");
+          const va = r2.querySelector(".pk-video-a"), vb = r2.querySelector(".pk-video-b"), cap = r2.querySelector(".pk-cap2");
+          const T = [{id:"tight_insertion", label:"Tight insertion"},{id:"beam_assembly_step1", label:"Beam assembly, step 1"},{id:"screwing", label:"Screwing"}];
+          picker("w3r2-pick", T, t => {
+            [va, vb].forEach(v => v.pause());
+            va.src = "assets/updates/week3/closedloop/" + t.id + "_seed20002_null.mp4"; va.load();
+            vb.src = "assets/updates/week3/closedloop/" + t.id + "_seed20002_task_space.mp4"; vb.load();
+            cap.textContent = t.label + "  ·  point-cloud policy  ·  seed 20002  ·  both variants start from the same state";
+          });
+        })();
+      })();
+      </script>
       <script>
       (function(){
       const TASKS = [
