@@ -107,14 +107,15 @@ img,video{max-width:100%; height:auto; border-radius:9px}
     <article class="entry" id="weeks-1-2">
       <div class="wk"><h2>Weeks 1&ndash;2</h2><span class="dt">Aug 31 &ndash; Sep 13, 2026</span></div>
       <p class="note">Two weeks of work on the force controller, ending in an evaluation on the play2perfect
-      assembly tasks. Twelve recorded
-      episodes, three per task, each replayed open loop three ways on the same clock. Every video below
-      stacks the three settings in one column, frame for frame, so the camera view and the per-fingertip
-      force curves (target dashed, measured solid, red cursor = current time) can be compared at the same instant.</p>
+      assembly tasks. Twelve recorded episodes, three per task, each replayed open loop three ways on the same clock.
+      Every video below stacks the three settings in one column, frame for frame, so the camera view and the
+      per-fingertip force curves (target dashed, measured solid, red cursor = current time) can be compared at the
+      same instant. The target pose is drawn as a faint translucent copy of the part, so it can be told apart from
+      the real part even when the two coincide.</p>
       <div class="rows">
-        <p><b>A &middot; Original action replay.</b> The recorded motor commands replayed exactly, no force law. The reference.</p>
-        <p><b>B &middot; State-only replay.</b> The recorded reached joint states replayed, no force law.</p>
-        <p><b>C &middot; State replay + force law.</b> The recorded reached joint states with the task-space force law on.</p>
+        <p><b>A &middot; Original action replay: sanity check.</b> The recorded motor commands replayed exactly; reproduces the recording.</p>
+        <p><b>B &middot; State-only replay: no force tracking.</b> The recorded reached joint states replayed through the position layer alone.</p>
+        <p><b>C &middot; State replay + force tracking.</b> Reached states served; the task-space force law supplies the grasp preload.</p>
       </div>
       <h3>Beam assembly, step 1</h3>
       <div class="vgrid">
