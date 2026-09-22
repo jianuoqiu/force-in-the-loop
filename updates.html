@@ -185,6 +185,146 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
          list (newest first), bump the id and the title, set the dates, and
          replace the placeholder paragraph with notes. -->
 
+    <article class="entry" id="week-4">
+      <div class="wk"><h2>Week 4</h2><span class="dt">Sep 21 &ndash; Sep 27, 2026</span></div>
+      <p class="note">Week 3 ended with 0 of 80 closed-loop successes on fresh starts. This week asks where in the pipeline the failure
+      sits, by evaluating <b>in domain</b>: every rollout starts from the bit-identical initial state of one of the policy's own
+      <b>training</b> episodes, so generalisation is out of the picture and the recording is available as a frame-by-frame reference.
+      Only the source of the 16-row reference chunk changes between conditions; the controller, physics and success test are the same throughout.</p>
+
+      <section class="result" id="w4-r1">
+        <h3><span class="rn">Result 3</span>In-domain closed-loop evaluation: a four-rung ladder</h3>
+        <p class="lead">Four ways of producing the reference the controller tracks, from a pure replay to the real closed loop.
+        Each rung isolates one thing: whether the evaluation stack works, whether a measured-state reference is executable at all,
+        whether the policy forecasts well on the training distribution, and whether it can drive itself.</p>
+
+        <div class="rows">
+          <p><b>1 &middot; Expert commands, exact replay.</b> The recorded motor targets, held per frame, no force law. If this fails the infrastructure is broken.</p>
+          <p><b>2 &middot; Perfect forecast.</b> No network: the recording's own future measured states, smoothed forces and contacts are served as the chunk, i.e. exactly what the policy is trained to output, with zero error. The ceiling of this reference type plus the controller.</p>
+          <p><b>3 &middot; Policy on recorded observations.</b> The real checkpoint, but at every state it receives the recording's observation (image or cloud, joints, velocities, forces, contacts). Its forecasts are executed in the live simulator; it never sees the consequences. Teacher forcing.</p>
+          <p><b>4 &middot; Policy live.</b> The real closed loop, same start.</p>
+        </div>
+
+        <details class="settings" open>
+          <summary>Experiment settings</summary>
+          <dl>
+            <dt>Episodes</dt><dd>5 training episodes per task, evenly spaced through the checkpoints' train split (seeds 1000 to 1079). 4 tasks &times; 5 episodes &times; 7 conditions = <b>140 rollouts</b>, one cold-start simulator process each; all 140 resets matched the recorded start bit for bit.</dd>
+            <dt>Policy</dt><dd>The Week 3 checkpoints, unchanged: point-cloud (shown in the videos) and RGB (tables). Rungs 1 and 2 use no network.</dd>
+            <dt>Rung 1</dt><dd>Recorded PD targets, hold interpolation, no velocity feedforward, null law: the exact replay.</dd>
+            <dt>Rungs 2 to 4</dt><dd>Week 3 loop: forecast every 2 states, linear interpolation at 120 Hz, velocity feedforward, task-space force law (kp 0.3, ki 10, clip 0.12 rad). Rung 2 was also run with the null law.</dd>
+            <dt>Rungs 2 and 3</dt><dd>Forecasts exist while the recording lasts; afterwards the last reference is held for 2 s so the environment can still reach a verdict.</dd>
+            <dt>Departure metrics</dt><dd>Rollout compared with the recording at the same frame: worst arm and hand joint error, part position error, first frame the part is more than 10 mm from its recorded position.</dd>
+            <dt>End</dt><dd>Success = all insertion sub-goals + retract. Otherwise 10 s no-progress timeout or the frame cap.</dd>
+          </dl>
+        </details>
+
+        <div class="picker" id="w4r1-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <div class="stack">
+          <figure>
+            <p class="lbl"><span class="k">1</span>Expert commands, exact replay <span class="sub">infrastructure check</span></p>
+            <video class="pk-video-1" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k">2</span>Perfect measured-state forecast + force law <span class="sub">no network, zero forecast error</span></p>
+            <video class="pk-video-2" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k">3</span>Policy on recorded observations <span class="sub">point-cloud checkpoint, teacher forced</span></p>
+            <video class="pk-video-3" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">4</span>Policy live <span class="sub">point-cloud checkpoint, closed loop</span></p>
+            <video class="pk-video-4" controls preload="auto" playsinline></video>
+            <figcaption class="pk-cap4"></figcaption>
+          </figure>
+        </div>
+
+        <h4>Outcome, all 140 rollouts</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; expert commands, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>&minus;0.3</td></tr>
+            <tr class="dim"><th scope="row">2 &middot; perfect forecast, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>228</td><td>&minus;8.7</td></tr>
+            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>124</td><td>&minus;6.7</td></tr>
+            <tr><th scope="row">3 &middot; point-cloud policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>127</td><td>&minus;5.2</td></tr>
+            <tr><th scope="row">3 &middot; RGB policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>144</td><td>&minus;4.6</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; point-cloud policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>244</td><td>&minus;0.9</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; RGB policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>246</td><td>&minus;0.5</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Successes per task over 5 training episodes. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 20 episodes of the row. The live rows have a small bias only because the fingers rarely reach the part.</p>
+
+        <h4>Departure from the recording</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>part leaves the recorded path (&gt; 10 mm) at frame</th><th>hand forecast error at 267 ms, rad</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; expert commands</th><td>0.000</td><td>0.000</td><td>never</td><td>&ndash;</td></tr>
+            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0.03</td><td>0.25 to 0.40</td><td>14 to 35</td><td>0 by construction</td></tr>
+            <tr><th scope="row">3 &middot; policy, recorded observations</th><td>0.03 to 0.04</td><td>0.26 to 0.50</td><td>30 to 38</td><td>0.06 to 0.08 (no-motion baseline 0.12 to 0.18)</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.5 to 2.5</td><td>1.7 to 2.0</td><td>17 to 36</td><td>0.31 to 0.40 (worse than predicting no motion)</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Ranges are across the four tasks, point-cloud and RGB pooled; frames at 60 Hz. Forecast error = mean |predicted &minus; recorded| of the hand joints at the last row of the chunk, against the recording's own future; for the live rung this is only meaningful before the rollout leaves the recording.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/departure_seed1000.png" alt="Part position error versus the recording over time, four tasks, for the perfect forecast, the policy on recorded observations and the live policy" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Part position error against the recording, training episode seed 1000 of each task, the same episodes as the videos. The perfect forecast and the teacher-forced policy overlap and both lose the part at the grasp; the live policy is off the path before the hand ever reaches the part.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <p><b>Rung 1: the evaluation stack is sound.</b> Replaying the expert's commands through the same reset, controller, physics and verdict succeeds 20 of 20 and reproduces the recordings bit for bit. Nothing below is a plumbing error.</p>
+          <p><b>Rung 2: a measured-state reference is not executable on this hand, even when perfect.</b> The recorded future joint angles track to 0.03 rad on the arm, yet every task drops the part at the grasp. Measured finger angles stop at the part surface and carry no squeeze: in contact the expert's commands lead the measured angles by 0.25 to 0.6 rad, the force law may add at most 0.12 rad, and it recovers only part of the preload (bias &minus;8.7 N without it, &minus;6.7 N with it). This is the same conclusion as the Weeks 1&ndash;2 state-only replay, now confirmed with the force law and the BC output format.</p>
+          <p><b>Rung 3: on its training distribution the policy is as good as the oracle.</b> Fed the recording's observations, both checkpoints reproduce the rung-2 rollouts almost exactly (arm within 0.03 rad, same grasp failure at the same moment). Hand forecast error at 267 ms is 0.06 to 0.08 rad, 2.5&times; better than predicting no motion. In-domain accuracy is not the limit; the reference type is.</p>
+          <p><b>Rung 4: the policy cannot drive itself, even from a training start.</b> With live inputs it leaves its own demonstration within 10 to 20 frames, before any contact, and its forecasts become worse than &ldquo;no motion&rdquo;. The mechanism is below.</p>
+        </div>
+      </section>
+
+      <section class="result" id="w4-r2">
+        <h3><span class="rn">Result 4</span>Why the live rollouts drift: the forecast is mostly velocity extrapolation</h3>
+        <p class="lead">Rungs 3 and 4 differ only in where the policy's inputs come from. Comparing them state by state on one episode shows how a small execution
+        error turns into a large forecast error, and an offline ablation shows which input carries it.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>tight insertion, seed 1000, point-cloud policy</th><th>state 0</th><th>state 2</th><th>state 4</th><th>state 8</th><th>state 12</th><th>state 16</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">joint position input, live minus recorded, rad</th><td>0.000</td><td>0.026</td><td>0.104</td><td>0.168</td><td>0.482</td><td>0.809</td></tr>
+            <tr><th scope="row">joint velocity input, live minus recorded, rad/s</th><td>0.00</td><td>1.07</td><td>1.72</td><td>4.23</td><td>4.70</td><td>4.67</td></tr>
+            <tr class="hi"><th scope="row">forecast, live minus recorded, rad</th><td>0.000</td><td>0.200</td><td>0.545</td><td>0.830</td><td>0.961</td><td>1.019</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Worst joint at each state. At state 0 the two rungs receive identical inputs and produce identical forecasts (2&times;10<sup>&minus;7</sup> rad), which also verifies the live input path. Two frames later the controller has executed the first rows with a 0.026 rad error, the velocity input differs by 1 rad/s, and the 267 ms forecast has moved by 0.20 rad: about 1 rad/s &times; 0.27 s.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/direction_beam1_seed1000.png" alt="Cosine between the predicted arm motion and the expert's motion, and between the predicted motion and the policy's own recent motion, over time for beam assembly step 1" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Beam assembly step 1, seed 1000: the expert first lifts the hand away from the beam, then turns around and descends to it. Teacher forced (green), the policy predicts that turn-around. Live (red), its forecast never aligns with the expert's motion again after 0.2 s; instead it aligns with the policy's own last 33 ms of motion (dashed), reaching 0.95 by 0.4 s. The hand keeps moving in its initial direction and ends 19 cm from where the expert grasps.</figcaption>
+        </figure>
+
+        <h4>Which input carries it: offline ablation on training episodes</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>policy</th><th>task</th><th>arm, as trained</th><th>arm, velocity inputs zeroed</th><th>hand, as trained</th><th>hand, velocity inputs zeroed</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" rowspan="4">Point cloud</th><td>tight insertion</td><td>0.93</td><td>0.10</td><td>0.81</td><td>0.19</td></tr>
+            <tr><td>beam step 1</td><td>0.91</td><td>0.15</td><td>0.85</td><td>0.28</td></tr>
+            <tr><td>beam step 2</td><td>0.88</td><td>0.13</td><td>0.79</td><td>0.26</td></tr>
+            <tr><td>screwing</td><td>0.83</td><td>0.15</td><td>0.75</td><td>0.19</td></tr>
+            <tr><th scope="row" rowspan="4">RGB</th><td>tight insertion</td><td>0.90</td><td>0.26</td><td>0.72</td><td>0.29</td></tr>
+            <tr><td>beam step 1</td><td>0.88</td><td>0.23</td><td>0.77</td><td>0.32</td></tr>
+            <tr><td>beam step 2</td><td>0.90</td><td>0.31</td><td>0.71</td><td>0.34</td></tr>
+            <tr><td>screwing</td><td>0.82</td><td>0.19</td><td>0.67</td><td>0.22</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Motion gain = slope of the predicted joint displacement on the recorded one, forecast row 1 (33 ms, the rows the controller executes); 1.0 = the right amount of motion. Two training episodes per task, recorded observations. &ldquo;Velocity inputs zeroed&rdquo; sets the joint-velocity and 33 ms joint-history inputs to zero and leaves the visual input, joint positions, forces, contacts and task ID untouched.</p>
+
+        <div class="callout">
+          <p><b>What the policy learned.</b> Three quarters or more of its near-term motion prediction is a copy of the velocity it is given; the scene, the joint configuration and the contacts account for the rest. That works under teacher forcing, where the recording's velocity is the input. Closed loop, the input velocity is the one the policy just produced: with a gain below 1 the motion decays, with a small execution error the direction locks in, and a manoeuvre that requires contradicting the current velocity, such as the turn-around above or closing the fingers from rest, is never predicted. Rung 4 fails on training episodes for this reason, not for lack of data coverage.</p>
+          <p><b>Two changes before the next evaluation.</b> (1) Train the joint head on the expert's <b>commands</b> (<code>joint_target</code>, already in the dataset) instead of measured angles, so the reference carries the grasp preload that rung 2 shows is missing; the force law then acts as a corrector, the role in which it was neutral to helpful in Weeks 1&ndash;2. (2) Remove the joint-velocity and history inputs, or corrupt them heavily during training, so the speed and direction of motion have to come from the observation. Rung 3 on training episodes is the acceptance test for a new checkpoint; rung 4 on the same episodes must then be passed before a fresh-seed evaluation says anything about generalisation.</p>
+        </div>
+      </section>
+    </article>
+
     <article class="entry" id="week-3">
       <div class="wk"><h2>Week 3</h2><span class="dt">Sep 14 &ndash; Sep 20, 2026</span></div>
       <p class="note">Two results this week, both from the behaviour-cloning (BC) policy trained on the play2perfect
@@ -355,6 +495,17 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
           root.querySelector(".pk-next").addEventListener("click", () => { sel.value = (Number(sel.value) + 1) % items.length; go(); });
           go();
         }
+        /* week 4, result 3: the four rungs stacked, four tasks, training episode seed 1000 */
+        (function(){
+          const r = document.getElementById("w4r1-pick").parentElement;
+          const vids = [1, 2, 3, 4].map(k => r.querySelector(".pk-video-" + k)), cap = r.querySelector(".pk-cap4");
+          const C = ["oraclecmd_null", "oracle_task_space", "pointcloud_task_space_recobs", "pointcloud_task_space"];
+          const T = [{id:"tight_insertion", label:"Tight insertion"},{id:"beam_assembly_step1", label:"Beam assembly, step 1"},{id:"beam_assembly_step2", label:"Beam assembly, step 2"},{id:"screwing", label:"Screwing"}];
+          picker("w4r1-pick", T, t => {
+            vids.forEach((v, i) => { v.pause(); v.src = "assets/updates/week4/" + t.id + "_seed1000_" + C[i] + ".mp4"; v.load(); });
+            cap.textContent = t.label + "  ·  training episode seed 1000  ·  all four rungs start from the same recorded state";
+          });
+        })();
         /* result 1: overlay video + time-series plot, four tasks */
         (function(){
           const r1 = document.getElementById("w3-r1");
