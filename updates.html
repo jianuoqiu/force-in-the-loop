@@ -190,7 +190,9 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
       <p class="note">Week 3 ended with 0 of 80 closed-loop successes on fresh starts. This week asks where in the pipeline the failure
       sits, by evaluating <b>in domain</b>: every rollout starts from the bit-identical initial state of one of the policy's own
       <b>training</b> episodes, so generalisation is out of the picture and the recording is available as a frame-by-frame reference.
-      Only the source of the 16-row reference chunk changes between conditions; the controller, physics and success test are the same throughout.</p>
+      Only the source of the 16-row reference chunk changes between conditions; the controller, physics and success test are the same throughout.
+      A dataset section then describes the small-range set built for the next round, and Result 5 tests a standing objection to the controller itself:
+      that generating fingertip force through a position servo is the wrong channel for a closed force loop.</p>
 
       <section class="result" id="w4-r1">
         <h3><span class="rn">Result 3</span>In-domain closed-loop evaluation: a four-rung ladder</h3>
@@ -321,6 +323,142 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
         <div class="callout">
           <p><b>What the policy learned.</b> Three quarters or more of its near-term motion prediction is a copy of the velocity it is given; the scene, the joint configuration and the contacts account for the rest. That works under teacher forcing, where the recording's velocity is the input. Closed loop, the input velocity is the one the policy just produced: with a gain below 1 the motion decays, with a small execution error the direction locks in, and a manoeuvre that requires contradicting the current velocity, such as the turn-around above or closing the fingers from rest, is never predicted. Rung 4 fails on training episodes for this reason, not for lack of data coverage.</p>
           <p><b>Two changes before the next evaluation.</b> (1) Train the joint head on the expert's <b>commands</b> (<code>joint_target</code>, already in the dataset) instead of measured angles, so the reference carries the grasp preload that rung 2 shows is missing; the force law then acts as a corrector, the role in which it was neutral to helpful in Weeks 1&ndash;2. (2) Remove the joint-velocity and history inputs, or corrupt them heavily during training, so the speed and direction of motion have to come from the observation. Rung 3 on training episodes is the acceptance test for a new checkpoint; rung 4 on the same episodes must then be passed before a fresh-seed evaluation says anything about generalisation.</p>
+        </div>
+      </section>
+      <section class="result" id="w4-data">
+        <h3><span class="rn">Dataset</span>A small-range set for overfitting first</h3>
+        <p class="lead">Before the two changes above are evaluated on fresh starts, the policy should be able to reproduce one
+        situation. The Week 3 set spreads 50 episodes per task over the full play2perfect reset draw (part anywhere in a 20 cm
+        square at any orientation, hole anywhere on the table), too much variety to tell an architecture problem from a coverage
+        problem. This set keeps the same expert, physics and recording format and shrinks the start distribution to a
+        neighbourhood of one recorded episode: <b>100 verified successes per task</b>, every one a distinct but closely related trajectory.</p>
+
+        <details class="settings" open>
+          <summary>How the set was collected</summary>
+          <dl>
+            <dt>Base episode</dt><dd>The shortest accepted episode of the Week 3 set per task (seeds 1000, 1036, 1018, 1050). Its recorded initial state is the centre of the neighbourhood.</dd>
+            <dt>Neighbourhood</dt><dd>Part start: xy &plusmn;1 cm, height fixed, orientation tilted by up to 10&deg; about a random axis (play2perfect only offers uniform random orientation or a fixed pose, so this is a new reset path). Hole: xy &plusmn;1 cm of the base hole. Observed-goal noise off. Robot start pose is fixed as before.</dd>
+            <dt>Why not one fixed start</dt><dd>The expert is deterministic (mean action) and the simulator replays bit-exactly from a cold start, so the same initial state gives the same episode; a re-run of one seed reproduced every recorded array. Variation has to come from the reset.</dd>
+            <dt>Seeds</dt><dd>One cold-start simulator process per seed (5000 upward), the seed drives only the small draw above. Same acceptance test as Week 3: the environment's own success verdict, clean termination, part at the goal at the last frame, offline insertion check, physics and image sanity.</dd>
+            <dt>Per episode</dt><dd>Same layout as the Week 3 set: 640&times;480 RGB every 2nd state, 29 joint positions / velocities / commands at 60 Hz and 120 Hz sub-steps, fingertip forces and contact points, joint torques, wrenches and the fake motor current, the 141-d policy observation, the initial state for exact replay. Depth, point cloud and wrist camera are re-rendered afterwards as before.</dd>
+            <dt>Cost</dt><dd>38 s per seed (55 s screwing) with the GPU free; 4 tasks in 5 h. 8.2 GB before the extra modalities.</dd>
+          </dl>
+        </details>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th scope="col">task</th><th scope="col">base seed</th><th scope="col">seeds tried</th><th scope="col">accepted</th><th scope="col">rejected (reason)</th><th scope="col">frames min / median / max</th><th scope="col">Week 3 set: accepted / tried</th><th scope="col">Week 3 frames min / mean / max</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">tight insertion</th><td>1000</td><td>118</td><td style="white-space:nowrap">100 (85 %)</td><td>18 (14 dropped, 4 timeout)</td><td>103 / 124 / 238</td><td>50 / 66 (76 %)</td><td>116 / 197 / 653</td></tr>
+            <tr><th scope="row">beam assembly, step 1</th><td>1036</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>105 / 114 / 148</td><td>50 / 58 (86 %)</td><td>113 / 205 / 604</td></tr>
+            <tr><th scope="row">beam assembly, step 2</th><td>1018</td><td>101</td><td style="white-space:nowrap">100 (99 %)</td><td>1 (dropped)</td><td>121 / 128 / 186</td><td>50 / 78 (64 %)</td><td>127 / 230 / 548</td></tr>
+            <tr><th scope="row">screwing</th><td>1050</td><td>112</td><td style="white-space:nowrap">100 (89 %)</td><td>12 (11 timeout, 1 stalled)</td><td>437 / 606 / 903</td><td>50 / 80 (62 %)</td><td>472 / 671 / 1037</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Frames at 60 Hz. The small-range episodes are shorter and far more uniform than the Week 3 set because the base is a short episode and the expert mostly repeats it; the long tail on tight insertion (16 episodes above 1.25&times; the median) is the expert missing the hole once and retrying.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/reset_states.png" alt="Scatter plots of the part start position, hole position and part orientation for the small-range and full-range sets, four tasks" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Initial states. Colour: the 100 small-range episodes; grey: the 50 Week 3 episodes; cross: the base episode. Bottom row: angle between each episode's part orientation and the base, capped at 10&deg; for the new set against 0 to 180&deg; before.</figcaption>
+        </figure>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/reset_and_final_frames.jpg" alt="Camera frames at reset and at the last frame for the base episode and five small-range episodes per task" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>What the camera sees. Per task: the base episode (left, red label) and five small-range episodes evenly spaced through the set; top row at reset, bottom row at the last recorded frame (part seated, hand withdrawn).</figcaption>
+        </figure>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/trajectory_bundle.png" alt="All 100 small-range trajectories per task overlaid on the base episode: part height, part-to-goal distance, fingertip force and hand command lead over time" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>The recorded trajectories, all 100 per task over the base episode (black). The bundles are tight through the grasp and lift and fan out only at the insertion, where the expert's timing depends on the exact part pose. The bottom row is the command lead the joint head must now learn to output (change 1 above).</figcaption>
+        </figure>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/example_episode.png" alt="One tight insertion episode: six camera frames at the key events and the recorded arm joints, hand command lead, fingertip forces and motor current over time" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>One episode in full (tight insertion, seed 5002): the frames at the key events and the main recorded arrays.</figcaption>
+        </figure>
+
+        <div class="picker" id="w4d-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <div class="duo">
+          <figure>
+            <video class="pk-video-base" controls preload="auto" playsinline loop></video>
+            <figcaption class="pk-cap-base"></figcaption>
+          </figure>
+          <figure>
+            <video class="pk-video-small" controls preload="auto" playsinline loop></video>
+            <figcaption class="pk-cap-small"></figcaption>
+          </figure>
+        </div>
+        <p class="tnote">Left: the base episode from the Week 3 set. Right: one episode of the new set started next to it. Review renders with the goal marker hidden, as in the training images.</p>
+
+        <div class="callout">
+          <p><b>How it will be used.</b> Train on this set alone and evaluate rungs 3 and 4 on its own episodes. A checkpoint that cannot drive itself through 100 near-identical episodes has a modelling problem that more data will not fix; one that can, moves on to the Week 3 set and then to fresh seeds. The base seeds and the neighbourhood ranges are recorded in every episode, so the same set can be regenerated or widened step by step.</p>
+        </div>
+      </section>
+
+      <section class="result" id="w4-r3">
+        <h3><span class="rn">Result 5</span>Does the actuation channel matter? Position offset against feedforward torque</h3>
+        <p class="lead">Every result so far generates fingertip force the same way: the law commands the joint <b>past</b> the contact and
+        the position servo's own tracking error becomes the squeeze, <code>dq = &minus;K<sup>&minus;1</sup>J<sup>T</sup>f</code>. The
+        standing objection is that position control is the wrong channel for closed-loop force control. So the force channel was given a
+        second, opt-in route &mdash; a feedforward joint torque <code>&tau; = &minus;J<sup>T</sup>f</code> added on top of the same servo
+        &mdash; and the two were compared on identical episodes.</p>
+
+        <details class="settings" open>
+          <summary>Experiment settings</summary>
+          <dl>
+            <dt>Episodes</dt><dd>The 12 perfect expert episodes, 3 per task, each rollout a cold-start simulator process from the recorded initial state. 2 conditions &times; 12 = <b>24 rollouts</b>, both arms run from the same working tree.</dd>
+            <dt>Reference</dt><dd>Oracle chunk policy: at every 12th frame the world is snapshotted, the expert policy is rolled 12 frames forward in the simulator to produce the reference states and forces, the snapshot is restored, and the chunk is executed through the middle layer. The reference is therefore generated <b>online</b> and the two arms share it only until their control diverges.</dd>
+            <dt>Premise</dt><dd>Measured (reached) joint states, so the law must supply the grasp preload &mdash; rung 2 of Result 3.</dd>
+            <dt>Position arm</dt><dd>Task-space law, defaults: kp 0.3, ki 10, per-joint offset clip 0.12 rad.</dd>
+            <dt>Torque arm</dt><dd>Same law and the same commanded force vector, delivered as joint torque instead, clipped at the servo effort limits (0.4 to 3.3 N&middot;m). The position target keeps the reference plus the contact-point channel only, so the two never press at once.</dd>
+            <dt>Implementation</dt><dd>The physics engine's implicit PD accepts a feedforward effort on top of the position target, so no actuator model, gain or checkpoint changes; planning is always done with the torque switched off, in the dynamics the expert policy was trained in.</dd>
+          </dl>
+        </details>
+
+        <h4>The two channels are the same actuator, up to their limit</h4>
+        <p>With an implicit PD the joint torque is <code>K(q* &minus; q) + &tau;<sub>ff</sub></code>. The position arm adds
+        <code>K&middot;dq = &minus;J<sup>T</sup>f</code>; the torque arm adds <code>&minus;J<sup>T</sup>f</code>. The stiffness cancels,
+        so the commanded torque is identical and only the saturation differs: a uniform 0.12 rad offset clip is a per-joint <b>torque</b>
+        cap of <code>0.12&middot;K</code>, which is 0.11 N&middot;m on the soft distal joints, against a servo limit up to 3.3 N&middot;m.
+        Measured by holding one recorded grasp and asking each channel for the same extra force on the loaded thumb:</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>force requested, N</th><th>position: peak offset, rad</th><th>position: delivered, N</th><th>torque: peak torque, N&middot;m</th><th>torque: delivered, N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">2</th><td>0.059</td><td>+0.98</td><td>0.09</td><td>+1.00</td></tr>
+            <tr><th scope="row">5</th><td>0.120 <span class="sub">at the clip</span></td><td>+1.93</td><td>0.23</td><td>+1.94</td></tr>
+            <tr><th scope="row">10</th><td>0.120 <span class="sub">at the clip</span></td><td>+2.47</td><td>0.46</td><td>+3.53</td></tr>
+            <tr class="hi"><th scope="row">20</th><td>0.120 <span class="sub">at the clip</span></td><td>+3.88</td><td>0.93</td><td>+8.77</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Tight insertion, frame 128, thumb loaded at 19.3 N; delivered = mean pad force over a 12-step hold minus the same hold with nothing applied. One cold-start process per cell, because repeated restores inside one process spread by 14 N at a contact-rich frame. Below the clip the two agree to 1&ndash;2%, which is the cross-check that the torque path is correctly signed and scaled; above it they part. Lifting the position clip instead of switching channel delivers +8.50 N, i.e. the same as torque &mdash; the difference in this table is the clip, not the channel. Both channels deliver only 0.4 to 0.5 N per newton asked for even unsaturated: contact compliance and part motion absorb the rest.</p>
+
+        <h4>Closed-loop outcome, 24 rollouts</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>force channel</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>sub-goals</th><th>dropped</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
+          <tbody>
+            <tr class="hi"><th scope="row">position offset <span class="sub">as in Results 1&ndash;4</span></th><td>0/3</td><td><b>3/3</b></td><td>0/3</td><td>0/3</td><td><b>3/12</b></td><td>7</td><td>7/12</td><td>97</td><td>&minus;3.60</td></tr>
+            <tr><th scope="row">feedforward torque</th><td>0/3</td><td>0/3</td><td>0/3</td><td>0/3</td><td>0/12</td><td>6</td><td>6/12</td><td>143</td><td>&minus;3.31</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Success = all sub-goals + retract. Sub-goals counts every sub-goal reached across the 12 rollouts. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 12 rollouts.</p>
+
+        <div class="picker" id="w4r3-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <figure class="stack">
+          <video class="pk-video" controls preload="auto" playsinline loop></video>
+          <figcaption class="pk-cap">One episode per task, the same start and the same reference source in both rows. Top: the force channel as a position offset. Bottom: the same commanded force as joint torque. Each row shows the camera view with per-fingertip force target (dashed) against measured (solid), and the part height.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <p><b>The channel is not the bottleneck here.</b> Torque loses all three beam-step-1 episodes that the position offset wins, and that is the whole gap; elsewhere the two are close, and torque actually drops the part slightly less often. It also ends with the <b>smallest</b> force bias of any setting run so far: it tracks the force target best and does the task worst. That is what the mechanism predicts, since more available squeeze is exactly what a wider clip buys, and wider clips were already measured to be harmful in Weeks 1&ndash;2 (clip 0.20 rad: 0 of 12).</p>
+          <p><b>One place it helps.</b> On screwing seed 0 the torque arm reached 6 of 10 sub-goals and held the part with a 9 mm closest approach, where the position arm reached 0 and dropped it. Screwing is the one task whose grip has to survive a long repeated re-grasp cycle, so more available force is plausibly the right trade there. It is a single episode and is treated as a lead, not a result.</p>
+          <p><b>Why the objection still stands off-simulator.</b> The argument against position control for force loops is about stiff hardware servos, their bandwidth and the absence of a torque interface. This hand's simulated servos are soft enough (0.9 N&middot;m/rad on the distal joints) that the position controller already behaves as a compliant force source, so switching channel only changes how hard the fingers may push. The limit remains the one Result 3 identified: a per-fingertip force law cannot reconstruct a grasp preload that the reference never contained.</p>
+          <p><b>Method note.</b> The first version of this comparison was discarded. The feedforward effort buffer persists across simulator calls and is not cleared by the planner's snapshot and restore, so the expert policy was planning each chunk with the previous grip torque still applied; and the baseline it was compared against came from an older working tree. Both arms above were re-run after the fix, and the two conditions are now bit-identical until the first contact torque and diverge only at the next planning boundary.</p>
         </div>
       </section>
     </article>
@@ -504,6 +642,38 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
           picker("w4r1-pick", T, t => {
             vids.forEach((v, i) => { v.pause(); v.src = "assets/updates/week4/" + t.id + "_seed1000_" + C[i] + ".mp4"; v.load(); });
             cap.textContent = t.label + "  ·  training episode seed 1000  ·  all four rungs start from the same recorded state";
+          });
+        })();
+        /* week 4, dataset: base episode next to one small-range episode, four tasks */
+        (function(){
+          const r = document.getElementById("w4-data");
+          const vb = r.querySelector(".pk-video-base"), vs = r.querySelector(".pk-video-small");
+          const cb = r.querySelector(".pk-cap-base"), cs = r.querySelector(".pk-cap-small");
+          const T = [{id:"tight_insertion", label:"Tight insertion", base:1000, small:5002},
+                     {id:"beam_assembly_step1", label:"Beam assembly, step 1", base:1036, small:5000},
+                     {id:"beam_assembly_step2", label:"Beam assembly, step 2", base:1018, small:5000},
+                     {id:"screwing", label:"Screwing", base:1050, small:5000}];
+          picker("w4d-pick", T, t => {
+            [vb, vs].forEach(v => v.pause());
+            vb.src = "assets/updates/week4/dataset_small/" + t.id + "_base_seed" + t.base + ".mp4"; vb.load();
+            vs.src = "assets/updates/week4/dataset_small/" + t.id + "_small_seed" + t.small + ".mp4"; vs.load();
+            cb.textContent = t.label + "  \u00b7  base episode, seed " + t.base + " (Week 3 set)";
+            cs.textContent = t.label + "  \u00b7  small-range episode, seed " + t.small;
+          });
+        })();
+        /* week 4, result 5: position offset above feedforward torque, one episode per task */
+        (function(){
+          const r = document.getElementById("w4-r3");
+          const vid = r.querySelector(".pk-video"), cap = r.querySelector(".pk-cap");
+          const T = [{id:"tight_insertion", label:"Tight insertion", seed:2, note:"position 1 of 2 sub-goals and held; torque dropped the part at frame 104"},
+                     {id:"beam_assembly_step1", label:"Beam assembly, step 1", seed:2, note:"position placed the beam, 2 of 2 + retract; torque dropped it at frame 105"},
+                     {id:"beam_assembly_step2", label:"Beam assembly, step 2", seed:1, note:"neither placed the part; torque held it where position dropped it at frame 275"},
+                     {id:"screwing", label:"Screwing", seed:0, note:"torque reached 6 of 10 sub-goals and held; position reached 0 and dropped the part at frame 340"}];
+          picker("w4r3-pick", T, t => {
+            vid.pause();
+            vid.src = "assets/updates/week4/actuation/" + t.id + "_seed" + t.seed + "_actuation.mp4"; vid.load();
+            cap.textContent = t.label + "  ·  seed " + t.seed + "  ·  " + t.note
+              + "  ·  top: force as a position offset, bottom: the same force as joint torque.";
           });
         })();
         /* result 1: overlay video + time-series plot, four tasks */
