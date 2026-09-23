@@ -412,30 +412,29 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
 
       <section class="result" id="w4-r3">
         <h3><span class="rn">Result 5</span>Does the actuation channel matter? Position offset against feedforward torque</h3>
-        <p class="lead">Every result so far generates fingertip force the same way: the law commands the joint <b>past</b> the contact and
-        the position servo's own tracking error becomes the squeeze, <code>dq = &minus;K<sup>&minus;1</sup>J<sup>T</sup>f</code>. The
-        standing objection is that position control is the wrong channel for closed-loop force control. So the force channel was given a
-        second, opt-in route &mdash; a feedforward joint torque <code>&tau; = &minus;J<sup>T</sup>f</code> added on top of the same servo
-        &mdash; and the two were compared on identical episodes.</p>
+        <p class="lead">Force has so far been made by commanding the joint <b>past</b> the contact, so the servo's tracking error becomes the
+        squeeze (<code>dq = &minus;K<sup>&minus;1</sup>J<sup>T</sup>f</code>). The standing objection: position control is the wrong channel for a
+        closed force loop. The same commanded force was therefore also delivered as joint torque (<code>&tau; = &minus;J<sup>T</sup>f</code>).</p>
 
         <details class="settings" open>
           <summary>Experiment settings</summary>
-          <dl>
-            <dt>Episodes</dt><dd>The 12 perfect expert episodes, 3 per task, each rollout a cold-start simulator process from the recorded initial state. 2 conditions &times; 12 = <b>24 rollouts</b>, both arms run from the same working tree.</dd>
-            <dt>Reference</dt><dd>Oracle chunk policy: at every 12th frame the world is snapshotted, the expert policy is rolled 12 frames forward in the simulator to produce the reference states and forces, the snapshot is restored, and the chunk is executed through the middle layer. The reference is therefore generated <b>online</b> and the two arms share it only until their control diverges.</dd>
-            <dt>Premise</dt><dd>Measured (reached) joint states, so the law must supply the grasp preload &mdash; rung 2 of Result 3.</dd>
-            <dt>Position arm</dt><dd>Task-space law, defaults: kp 0.3, ki 10, per-joint offset clip 0.12 rad.</dd>
-            <dt>Torque arm</dt><dd>Same law and the same commanded force vector, delivered as joint torque instead, clipped at the servo effort limits (0.4 to 3.3 N&middot;m). The position target keeps the reference plus the contact-point channel only, so the two never press at once.</dd>
-            <dt>Implementation</dt><dd>The physics engine's implicit PD accepts a feedforward effort on top of the position target, so no actuator model, gain or checkpoint changes; planning is always done with the torque switched off, in the dynamics the expert policy was trained in.</dd>
-          </dl>
+          <ul style="margin:6px 0 14px; font-size:14.5px">
+            <li><b>Episodes</b>: the 12 perfect expert episodes, 3 per task; 2 conditions = 24 rollouts, one cold-start process each, both arms from the same working tree.</li>
+            <li><b>Reference</b>: oracle chunk policy, re-planned every 12 frames from the current state &mdash; generated <b>online</b>, so the arms share it only until their control diverges.</li>
+            <li><b>Premise</b>: measured joint states, so the law must supply the preload (rung 2 of Result 3).</li>
+            <li><b>Position arm</b>: task-space law, defaults &mdash; kp 0.3, ki 10, offset clip 0.12 rad.</li>
+            <li><b>Torque arm</b>: same commanded force as joint torque, clipped at the servo limits (0.4 to 3.3 N&middot;m); position target keeps the reference + contact-point channel only.</li>
+            <li><b>Planning</b>: always with the torque off, in the dynamics the expert policy was trained in.</li>
+          </ul>
         </details>
 
-        <h4>The two channels are the same actuator, up to their limit</h4>
-        <p>With an implicit PD the joint torque is <code>K(q* &minus; q) + &tau;<sub>ff</sub></code>. The position arm adds
-        <code>K&middot;dq = &minus;J<sup>T</sup>f</code>; the torque arm adds <code>&minus;J<sup>T</sup>f</code>. The stiffness cancels,
-        so the commanded torque is identical and only the saturation differs: a uniform 0.12 rad offset clip is a per-joint <b>torque</b>
-        cap of <code>0.12&middot;K</code>, which is 0.11 N&middot;m on the soft distal joints, against a servo limit up to 3.3 N&middot;m.
-        Measured by holding one recorded grasp and asking each channel for the same extra force on the loaded thumb:</p>
+        <h4>Same actuator, different limit</h4>
+        <ul>
+          <li>Implicit PD torque = <code>K(q* &minus; q) + &tau;<sub>ff</sub></code>. Position adds <code>K&middot;dq = &minus;J<sup>T</sup>f</code>, torque adds <code>&minus;J<sup>T</sup>f</code> &mdash; <b>identical commanded torque</b>, the stiffness cancels.</li>
+          <li>Only the saturation differs: a 0.12 rad offset clip is a per-joint <b>torque</b> cap of <code>0.12&middot;K</code> = 0.11 N&middot;m on the distal joints, against a servo limit up to 3.3 N&middot;m.</li>
+          <li>Lifting the position clip instead of switching channel delivers +8.50 N at a 20 N request vs +8.77 N for torque &mdash; the gap below is the <b>clip</b>, not the channel.</li>
+          <li>Both channels deliver only 0.4 to 0.5 N per newton asked, even unsaturated: contact compliance and part motion absorb the rest.</li>
+        </ul>
 
         <div class="tblwrap"><table class="res">
           <thead><tr><th>force requested, N</th><th>position: peak offset, rad</th><th>position: delivered, N</th><th>torque: peak torque, N&middot;m</th><th>torque: delivered, N</th></tr></thead>
@@ -446,7 +445,7 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             <tr class="hi"><th scope="row">20</th><td>0.120 <span class="sub">at the clip</span></td><td>+3.88</td><td>0.93</td><td>+8.77</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Tight insertion, frame 128, thumb loaded at 19.3 N; delivered = mean pad force over a 12-step hold minus the same hold with nothing applied. One cold-start process per cell, because repeated restores inside one process spread by 14 N at a contact-rich frame. Below the clip the two agree to 1&ndash;2%, which is the cross-check that the torque path is correctly signed and scaled; above it they part. Lifting the position clip instead of switching channel delivers +8.50 N, i.e. the same as torque &mdash; the difference in this table is the clip, not the channel. Both channels deliver only 0.4 to 0.5 N per newton asked for even unsaturated: contact compliance and part motion absorb the rest.</p>
+        <p class="tnote">Tight insertion, frame 128, thumb loaded at 19.3 N. Delivered = mean pad force over a 12-step hold minus the same hold with nothing applied; one cold-start process per cell. Below the clip the two agree to 1&ndash;2% &mdash; the cross-check that the torque path is correctly signed and scaled.</p>
 
         <h4>Closed-loop outcome, 24 rollouts</h4>
         <div class="tblwrap"><table class="res">
@@ -456,7 +455,7 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             <tr><th scope="row">feedforward torque</th><td>0/3</td><td>0/3</td><td>0/3</td><td>0/3</td><td>0/12</td><td>6</td><td>6/12</td><td>143</td><td>&minus;3.31</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Success = all sub-goals + retract. Sub-goals counts every sub-goal reached across the 12 rollouts. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 12 rollouts.</p>
+        <p class="tnote">Success = all sub-goals + retract. Sub-goals counts every sub-goal reached across the 12 rollouts; closest keypoint and force bias (worst fingertip, while engaged) are means over them.</p>
 
         <div class="picker" id="w4r3-pick" role="group" aria-label="Choose a task">
           <label>Task <select class="pk-task"></select></label>
@@ -464,14 +463,18 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
         </div>
         <figure class="stack">
           <video class="pk-video" controls preload="auto" playsinline loop></video>
-          <figcaption class="pk-cap">One episode per task, the same start and the same reference source in both rows. Top: the force channel as a position offset. Bottom: the same commanded force as joint torque. Each row shows the camera view with per-fingertip force target (dashed) against measured (solid), and the part height.</figcaption>
+          <figcaption class="pk-cap">Same start and same reference source in both rows. Top: force as a position offset. Bottom: the same force as joint torque.</figcaption>
         </figure>
 
         <div class="callout">
-          <p><b>The channel is not the bottleneck here.</b> Torque loses all three beam-step-1 episodes that the position offset wins, and that is the whole gap; elsewhere the two are close, and torque actually drops the part slightly less often. It also ends with the <b>smallest</b> force bias of any setting run so far: it tracks the force target best and does the task worst. That is what the mechanism predicts, since more available squeeze is exactly what a wider clip buys, and wider clips were already measured to be harmful in Weeks 1&ndash;2 (clip 0.20 rad: 0 of 12).</p>
-          <p><b>One place it helps.</b> On screwing seed 0 the torque arm reached 6 of 10 sub-goals and held the part with a 9 mm closest approach, where the position arm reached 0 and dropped it. Screwing is the one task whose grip has to survive a long repeated re-grasp cycle, so more available force is plausibly the right trade there. It is a single episode and is treated as a lead, not a result.</p>
-          <p><b>Why the objection still stands off-simulator.</b> The argument against position control for force loops is about stiff hardware servos, their bandwidth and the absence of a torque interface. This hand's simulated servos are soft enough (0.9 N&middot;m/rad on the distal joints) that the position controller already behaves as a compliant force source, so switching channel only changes how hard the fingers may push. The limit remains the one Result 3 identified: a per-fingertip force law cannot reconstruct a grasp preload that the reference never contained.</p>
-          <p><b>Method note.</b> The first version of this comparison was discarded. The feedforward effort buffer persists across simulator calls and is not cleared by the planner's snapshot and restore, so the expert policy was planning each chunk with the previous grip torque still applied; and the baseline it was compared against came from an older working tree. Both arms above were re-run after the fix, and the two conditions are now bit-identical until the first contact torque and diverge only at the next planning boundary.</p>
+          <ul style="margin:0">
+            <li><b>The channel is not the bottleneck here</b>: torque loses all three beam-step-1 episodes that position wins, and that is the whole gap. Elsewhere the two are close &mdash; torque even drops the part slightly less often, and has the smallest force bias of any setting so far: best force tracking, worst task.</li>
+            <li><b>As the mechanism predicts</b>: more squeeze is what a wider clip buys, and wider clips were already measured harmful in Weeks 1&ndash;2 (clip 0.20 rad: 0 of 12).</li>
+            <li><b>One lead</b>: screwing seed 0 &mdash; torque 6 of 10 sub-goals, part held, 9 mm closest; position 0 and dropped. Its grip must survive a long re-grasp cycle. Single episode, not a result.</li>
+            <li><b>Off-simulator the objection stands</b>: it is about stiff hardware servos, bandwidth and the lack of a torque interface. These simulated servos (0.9 N&middot;m/rad distal) already act as a compliant force source, so the channel only changes how hard the fingers may push.</li>
+            <li><b>The real limit is unchanged</b>: a per-fingertip force law cannot reconstruct a grasp preload the reference never contained (Result 3).</li>
+            <li><b>Method note</b>: the first version was discarded &mdash; the feedforward effort persisted into the planner's rollouts, so the expert planned each chunk with the previous grip torque applied, and the baseline came from an older working tree. Both arms re-run after the fix.</li>
+          </ul>
         </div>
       </section>
     </article>
