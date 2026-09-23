@@ -187,12 +187,9 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
 
     <article class="entry" id="week-4">
       <div class="wk"><h2>Week 4</h2><span class="dt">Sep 21 &ndash; Sep 27, 2026</span></div>
-      <p class="note">Week 3 ended with 0 of 80 closed-loop successes on fresh starts. This week asks where in the pipeline the failure
-      sits, by evaluating <b>in domain</b>: every rollout starts from the bit-identical initial state of one of the policy's own
-      <b>training</b> episodes, so generalisation is out of the picture and the recording is available as a frame-by-frame reference.
-      Only the source of the 16-row reference chunk changes between conditions; the controller, physics and success test are the same throughout.
-      A dataset section then describes the small-range set built for the next round, and Result 5 tests a standing objection to the controller itself:
-      that generating fingertip force through a position servo is the wrong channel for a closed force loop.</p>
+      <p class="note">Week 3: 0 of 80 closed-loop successes on fresh starts. This week: <b>in-domain</b> evaluation. Every rollout starts from the
+      bit-identical initial state of one of the policy's own <b>training</b> episodes, so the recording is a frame-by-frame reference. Same controller,
+      physics and success test throughout; only the source of the reference chunk changes. A dataset section then describes the small-range set built for the next round, and Result 5 tests a standing objection to the controller itself: that generating fingertip force through a position servo is the wrong channel for a closed force loop.</p>
 
       <section class="result" id="w4-r1">
         <h3><span class="rn">Result 3</span>In-domain closed-loop evaluation: a four-rung ladder</h3>
@@ -277,34 +274,43 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
         </figure>
 
         <div class="callout">
-          <p><b>Rung 1: the evaluation stack is sound.</b> Replaying the expert's commands through the same reset, controller, physics and verdict succeeds 20 of 20 and reproduces the recordings bit for bit. Nothing below is a plumbing error.</p>
-          <p><b>Rung 2: a measured-state reference is not executable on this hand, even when perfect.</b> The recorded future joint angles track to 0.03 rad on the arm, yet every task drops the part at the grasp. Measured finger angles stop at the part surface and carry no squeeze: in contact the expert's commands lead the measured angles by 0.25 to 0.6 rad, the force law may add at most 0.12 rad, and it recovers only part of the preload (bias &minus;8.7 N without it, &minus;6.7 N with it). This is the same conclusion as the Weeks 1&ndash;2 state-only replay, now confirmed with the force law and the BC output format.</p>
-          <p><b>Rung 3: on its training distribution the policy is as good as the oracle.</b> Fed the recording's observations, both checkpoints reproduce the rung-2 rollouts almost exactly (arm within 0.03 rad, same grasp failure at the same moment). Hand forecast error at 267 ms is 0.06 to 0.08 rad, 2.5&times; better than predicting no motion. In-domain accuracy is not the limit; the reference type is.</p>
-          <p><b>Rung 4: the policy cannot drive itself, even from a training start.</b> With live inputs it leaves its own demonstration within 10 to 20 frames, before any contact, and its forecasts become worse than &ldquo;no motion&rdquo;. The mechanism is below.</p>
+          <p><b>What each rung says</b></p>
+          <ul style="margin:0">
+            <li><b>Rung 1, 20/20:</b> the evaluation stack is sound; recordings reproduced bit for bit.</li>
+            <li><b>Rung 2, 0/20:</b> a measured-state reference is not executable on this hand, even when perfect. Measured finger angles carry no squeeze (expert command leads measured by 0.25&ndash;0.6 rad in contact; force law adds &le; 0.12 rad; bias &minus;6.7 N). Part slips at the grasp in every task.</li>
+            <li><b>Rung 3, 0/20:</b> fed the recording's observations, the policy reproduces rung 2 almost exactly (arm within 0.03 rad, same grasp failure). In-domain forecast accuracy is fine (hand 0.06&ndash;0.08 rad at 267 ms, 2.5&times; better than no-motion). The reference type is the limit, not the fit.</li>
+            <li><b>Rung 4, 0/20:</b> live, the policy leaves its own demonstration within 10&ndash;20 frames, before any contact. Cause below.</li>
+          </ul>
         </div>
       </section>
 
       <section class="result" id="w4-r2">
-        <h3><span class="rn">Result 4</span>Why the live rollouts drift: the forecast is mostly velocity extrapolation</h3>
-        <p class="lead">Rungs 3 and 4 differ only in where the policy's inputs come from. Comparing them state by state on one episode shows how a small execution
-        error turns into a large forecast error, and an offline ablation shows which input carries it.</p>
+        <h3><span class="rn">Result 4</span>Why the live rollout drifts: same first step, then the policy is shown different things</h3>
+        <p class="lead">Rungs 3 and 4 use the same checkpoint from the same start and differ only in where the policy's inputs come from. Traced state by state on beam step 1, seed 1000 (no contact, zero force throughout).</p>
 
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>tight insertion, seed 1000, point-cloud policy</th><th>state 0</th><th>state 2</th><th>state 4</th><th>state 8</th><th>state 12</th><th>state 16</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">joint position input, live minus recorded, rad</th><td>0.000</td><td>0.026</td><td>0.104</td><td>0.168</td><td>0.482</td><td>0.809</td></tr>
-            <tr><th scope="row">joint velocity input, live minus recorded, rad/s</th><td>0.00</td><td>1.07</td><td>1.72</td><td>4.23</td><td>4.70</td><td>4.67</td></tr>
-            <tr class="hi"><th scope="row">forecast, live minus recorded, rad</th><td>0.000</td><td>0.200</td><td>0.545</td><td>0.830</td><td>0.961</td><td>1.019</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Worst joint at each state. At state 0 the two rungs receive identical inputs and produce identical forecasts (2&times;10<sup>&minus;7</sup> rad), which also verifies the live input path. Two frames later the controller has executed the first rows with a 0.026 rad error, the velocity input differs by 1 rad/s, and the 267 ms forecast has moved by 0.20 rad: about 1 rad/s &times; 0.27 s.</p>
+        <div class="callout">
+          <p><b>Key point</b></p>
+          <ul style="margin:0">
+            <li><b>State 0:</b> identical observation in both runs &rarr; identical forecast (2&times;10<sup>&minus;7</sup> rad) &rarr; identical PD targets &rarr; identical simulator state through state 2 (7&times;10<sup>&minus;9</sup> rad). The policy is deterministic; no representation difference (deploy-side inputs and outputs equal the training-side computation to 0.0).</li>
+            <li><b>But that first move is not the expert's move.</b> At reset every non-visual input is the same in every episode of a task (same robot pose, zero velocity, zero force, no contact), and the network puts ~zero weight on the point cloud: across 12 training episodes the state-0 arm forecast is <b>identical</b> (spread 0.000 rad) while the true first moves spread 0.065 rad (part spawn &plusmn;4&ndash;5 cm). It outputs the dataset-average first move. For this episode: cosine &minus;0.34 with the expert's motion.</li>
+            <li><b>So after 2 frames both simulators are equally off the recording:</b> 0.037 rad (thumb abduction), ~1&ndash;2 rad/s on hand joints, arm velocities of opposite sign.</li>
+            <li><b>State 2, the only difference between the runs:</b> rung 3's policy is shown the <i>recording's</i> state 2 (as if nothing drifted); rung 4's policy is shown its <i>own simulator's</i> state 2.</li>
+            <li><b>That difference is amplified by the velocity input.</b> Swap test at state 4, cloud and joint positions held fixed: recorded velocity &rarr; arm forecast cosine +0.84 with the expert; live velocity &rarr; &minus;0.08. Swapping the joint positions instead changes it by 0.03. Second forecasts differ by 0.20 rad; from there the loop compounds.</li>
+            <li><b>Net:</b> rung 3 looks normal only because it is told every 2 frames that it is where the expert was. Rung 4 is told the truth about its own robot and follows its own velocity instead of the scene.</li>
+          </ul>
+        </div>
 
         <figure class="stack" style="margin-top:18px">
-          <img src="assets/updates/week4/direction_beam1_seed1000.png" alt="Cosine between the predicted arm motion and the expert's motion, and between the predicted motion and the policy's own recent motion, over time for beam assembly step 1" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Beam assembly step 1, seed 1000: the expert first lifts the hand away from the beam, then turns around and descends to it. Teacher forced (green), the policy predicts that turn-around. Live (red), its forecast never aligns with the expert's motion again after 0.2 s; instead it aligns with the policy's own last 33 ms of motion (dashed), reaching 0.95 by 0.4 s. The hand keeps moving in its initial direction and ends 19 cm from where the expert grasps.</figcaption>
+          <img src="assets/updates/week4/beam1_seed1000_forecasts_vs_measured.png" alt="Per joint: demonstration, measured state of both simulators, and the 16-row forecasts of both runs over the first 40 states" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>First 40 states, 7 arm joints + 3 hand joints. Thick: demonstration (black), rung 3 simulator (green), rung 4 simulator (red): green and red coincide through state 2 and both are already off black. Thin: the forecast issued at each even state; rung 3's bend onto the demonstration (it is fed the demonstration's velocity), rung 4's follow its own measured line.</figcaption>
         </figure>
 
-        <h4>Which input carries it: offline ablation on training episodes</h4>
+        <figure class="stack" style="margin-top:14px">
+          <img src="assets/updates/week4/beam1_seed1000_clouds.png" alt="Recorded point cloud fed to rung 3 vs live point cloud fed to rung 4, top view, at six states" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>The visual input itself: recorded cloud (rung 3, green) vs live cloud (rung 4, red), top view above the table. Identical at state 0 (chamfer 0.0 mm); later they differ only where the robot is.</figcaption>
+        </figure>
+
+        <h4>How much of the forecast is the velocity input</h4>
         <div class="tblwrap"><table class="res">
           <thead><tr><th>policy</th><th>task</th><th>arm, as trained</th><th>arm, velocity inputs zeroed</th><th>hand, as trained</th><th>hand, velocity inputs zeroed</th></tr></thead>
           <tbody>
@@ -318,31 +324,33 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             <tr><td>screwing</td><td>0.82</td><td>0.19</td><td>0.67</td><td>0.22</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Motion gain = slope of the predicted joint displacement on the recorded one, forecast row 1 (33 ms, the rows the controller executes); 1.0 = the right amount of motion. Two training episodes per task, recorded observations. &ldquo;Velocity inputs zeroed&rdquo; sets the joint-velocity and 33 ms joint-history inputs to zero and leaves the visual input, joint positions, forces, contacts and task ID untouched.</p>
+        <p class="tnote">Motion gain = slope of predicted on recorded joint displacement, forecast row 1 (33 ms), offline on training episodes; 1.0 = right amount of motion. &ldquo;Zeroed&rdquo;: joint-velocity and 33 ms history inputs set to 0, everything else unchanged. Three quarters or more of the near-term motion is a copy of the velocity input.</p>
 
         <div class="callout">
-          <p><b>What the policy learned.</b> Three quarters or more of its near-term motion prediction is a copy of the velocity it is given; the scene, the joint configuration and the contacts account for the rest. That works under teacher forcing, where the recording's velocity is the input. Closed loop, the input velocity is the one the policy just produced: with a gain below 1 the motion decays, with a small execution error the direction locks in, and a manoeuvre that requires contradicting the current velocity, such as the turn-around above or closing the fingers from rest, is never predicted. Rung 4 fails on training episodes for this reason, not for lack of data coverage.</p>
-          <p><b>Two changes before the next evaluation.</b> (1) Train the joint head on the expert's <b>commands</b> (<code>joint_target</code>, already in the dataset) instead of measured angles, so the reference carries the grasp preload that rung 2 shows is missing; the force law then acts as a corrector, the role in which it was neutral to helpful in Weeks 1&ndash;2. (2) Remove the joint-velocity and history inputs, or corrupt them heavily during training, so the speed and direction of motion have to come from the observation. Rung 3 on training episodes is the acceptance test for a new checkpoint; rung 4 on the same episodes must then be passed before a fresh-seed evaluation says anything about generalisation.</p>
+          <p><b>Before the next evaluation</b></p>
+          <ul style="margin:0">
+            <li>Joint head predicts the expert's <b>commands</b> (<code>joint_target</code>, already in the dataset), not measured angles &rarr; the reference carries the preload rung 2 lacks; the force law becomes a corrector.</li>
+            <li>Remove the joint-velocity and history inputs (or corrupt them heavily in training) &rarr; direction and speed must come from the cloud and the robot pose.</li>
+            <li>Make the cloud informative: workspace crop / part-centred points (today 20&ndash;50 of 4096 points lie on the part).</li>
+            <li>Acceptance tests for a new checkpoint, in order: rung 3 on training episodes, then rung 4 on the same episodes, then fresh seeds.</li>
+          </ul>
         </div>
       </section>
       <section class="result" id="w4-data">
         <h3><span class="rn">Dataset</span>A small-range set for overfitting first</h3>
-        <p class="lead">Before the two changes above are evaluated on fresh starts, the policy should be able to reproduce one
-        situation. The Week 3 set spreads 50 episodes per task over the full play2perfect reset draw (part anywhere in a 20 cm
-        square at any orientation, hole anywhere on the table), too much variety to tell an architecture problem from a coverage
-        problem. This set keeps the same expert, physics and recording format and shrinks the start distribution to a
-        neighbourhood of one recorded episode: <b>100 verified successes per task</b>, every one a distinct but closely related trajectory.</p>
+        <p class="lead">Same expert, physics and recording format as the Week 3 set, but every episode starts next to one recorded
+        episode. Goal: a set the policy should be able to reproduce, to separate a modelling problem from a coverage problem.</p>
 
         <details class="settings" open>
-          <summary>How the set was collected</summary>
-          <dl>
-            <dt>Base episode</dt><dd>The shortest accepted episode of the Week 3 set per task (seeds 1000, 1036, 1018, 1050). Its recorded initial state is the centre of the neighbourhood.</dd>
-            <dt>Neighbourhood</dt><dd>Part start: xy &plusmn;1 cm, height fixed, orientation tilted by up to 10&deg; about a random axis (play2perfect only offers uniform random orientation or a fixed pose, so this is a new reset path). Hole: xy &plusmn;1 cm of the base hole. Observed-goal noise off. Robot start pose is fixed as before.</dd>
-            <dt>Why not one fixed start</dt><dd>The expert is deterministic (mean action) and the simulator replays bit-exactly from a cold start, so the same initial state gives the same episode; a re-run of one seed reproduced every recorded array. Variation has to come from the reset.</dd>
-            <dt>Seeds</dt><dd>One cold-start simulator process per seed (5000 upward), the seed drives only the small draw above. Same acceptance test as Week 3: the environment's own success verdict, clean termination, part at the goal at the last frame, offline insertion check, physics and image sanity.</dd>
-            <dt>Per episode</dt><dd>Same layout as the Week 3 set: 640&times;480 RGB every 2nd state, 29 joint positions / velocities / commands at 60 Hz and 120 Hz sub-steps, fingertip forces and contact points, joint torques, wrenches and the fake motor current, the 141-d policy observation, the initial state for exact replay. Depth, point cloud and wrist camera are re-rendered afterwards as before.</dd>
-            <dt>Cost</dt><dd>38 s per seed (55 s screwing) with the GPU free; 4 tasks in 5 h. 8.2 GB before the extra modalities.</dd>
-          </dl>
+          <summary>How it was collected</summary>
+          <ul style="margin:6px 0 14px; font-size:14.5px">
+            <li><b>Base episode</b>: shortest accepted Week 3 episode per task (seeds 1000, 1036, 1018, 1050).</li>
+            <li><b>Neighbourhood</b>: part xy &plusmn;1 cm, tilt &le;10&deg; about the base pose, height fixed; hole xy &plusmn;1 cm; goal-observation noise off; robot start pose fixed.</li>
+            <li><b>Why a range at all</b>: the expert is deterministic and the simulator replays bit-exactly, so one fixed start = one episode repeated.</li>
+            <li><b>Seeds</b>: one cold-start process per seed (5000 upward); the seed drives only the small draw; Week 3 acceptance test unchanged.</li>
+            <li><b>Per episode</b>: same arrays as Week 3 (RGB, joints at 60 / 120 Hz, fingertip forces and contacts, torques, fake motor current, policy observation, initial state). Depth, point cloud, wrist views: to be re-rendered.</li>
+            <li><b>Cost</b>: 38 s per seed (55 s screwing), 4 tasks in 5 h, 8.2 GB.</li>
+          </ul>
         </details>
 
         <div class="tblwrap"><table class="res">
@@ -354,26 +362,26 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             <tr><th scope="row">screwing</th><td>1050</td><td>112</td><td style="white-space:nowrap">100 (89 %)</td><td>12 (11 timeout, 1 stalled)</td><td>437 / 606 / 903</td><td>50 / 80 (62 %)</td><td>472 / 671 / 1037</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Frames at 60 Hz. The small-range episodes are shorter and far more uniform than the Week 3 set because the base is a short episode and the expert mostly repeats it; the long tail on tight insertion (16 episodes above 1.25&times; the median) is the expert missing the hole once and retrying.</p>
+        <p class="tnote">Frames at 60 Hz. Episodes are shorter and more uniform than Week 3; the tight-insertion tail (16 episodes above 1.25&times; median) = expert misses the hole once and retries.</p>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/reset_states.png" alt="Scatter plots of the part start position, hole position and part orientation for the small-range and full-range sets, four tasks" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Initial states. Colour: the 100 small-range episodes; grey: the 50 Week 3 episodes; cross: the base episode. Bottom row: angle between each episode's part orientation and the base, capped at 10&deg; for the new set against 0 to 180&deg; before.</figcaption>
+          <figcaption>Initial states. Colour: 100 new episodes; grey: 50 Week 3 episodes; cross: base. Bottom row: tilt from the base, &le;10&deg; now vs 0 to 180&deg; before.</figcaption>
         </figure>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/reset_and_final_frames.jpg" alt="Camera frames at reset and at the last frame for the base episode and five small-range episodes per task" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>What the camera sees. Per task: the base episode (left, red label) and five small-range episodes evenly spaced through the set; top row at reset, bottom row at the last recorded frame (part seated, hand withdrawn).</figcaption>
+          <figcaption>Camera view. Per task: base (left, red label) + 5 new episodes; top = reset, bottom = last frame.</figcaption>
         </figure>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/trajectory_bundle.png" alt="All 100 small-range trajectories per task overlaid on the base episode: part height, part-to-goal distance, fingertip force and hand command lead over time" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>The recorded trajectories, all 100 per task over the base episode (black). The bundles are tight through the grasp and lift and fan out only at the insertion, where the expert's timing depends on the exact part pose. The bottom row is the command lead the joint head must now learn to output (change 1 above).</figcaption>
+          <figcaption>All 100 trajectories per task (colour) over the base (black). Tight through grasp and lift, spread only at insertion. Bottom row = the command lead the joint head must output (change 1).</figcaption>
         </figure>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/example_episode.png" alt="One tight insertion episode: six camera frames at the key events and the recorded arm joints, hand command lead, fingertip forces and motor current over time" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>One episode in full (tight insertion, seed 5002): the frames at the key events and the main recorded arrays.</figcaption>
+          <figcaption>One episode in full (tight insertion, seed 5002).</figcaption>
         </figure>
 
         <div class="picker" id="w4d-pick" role="group" aria-label="Choose a task">
@@ -390,10 +398,15 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             <figcaption class="pk-cap-small"></figcaption>
           </figure>
         </div>
-        <p class="tnote">Left: the base episode from the Week 3 set. Right: one episode of the new set started next to it. Review renders with the goal marker hidden, as in the training images.</p>
+        <p class="tnote">Left: base episode (Week 3 set). Right: one new episode started next to it. Goal marker hidden, as in the training images.</p>
 
         <div class="callout">
-          <p><b>How it will be used.</b> Train on this set alone and evaluate rungs 3 and 4 on its own episodes. A checkpoint that cannot drive itself through 100 near-identical episodes has a modelling problem that more data will not fix; one that can, moves on to the Week 3 set and then to fresh seeds. The base seeds and the neighbourhood ranges are recorded in every episode, so the same set can be regenerated or widened step by step.</p>
+          <p><b>Use</b></p>
+          <ul style="margin:0">
+            <li>Train on this set alone; evaluate rungs 3 and 4 on its own episodes.</li>
+            <li>Fails on 100 near-identical episodes &rarr; modelling problem, not data. Passes &rarr; Week 3 set, then fresh seeds.</li>
+            <li>Base seeds and ranges are stored in every episode; the set can be regenerated or widened step by step.</li>
+          </ul>
         </div>
       </section>
 
