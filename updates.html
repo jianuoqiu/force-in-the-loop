@@ -294,7 +294,6 @@ html{scroll-behavior:smooth}
         <li><b>2</b> Why the live rollout drifts: the forecast is mostly a copy of the velocity input.</li>
         <li><b>3</b> Actuation channel, position offset vs feedforward torque: not the bottleneck.</li>
         <li><b>4</b> A small-range dataset, 100 episodes per task next to one base episode, for overfitting first.</li>
-        <li><b>5</b> Second-generation checkpoints (EgoVerse, trained on that set) through the same ladder: same outcome; the controller path itself breaks even the expert's commands.</li>
       </ul>
 
       <!-- ─────────────── 1: the in-domain ladder ─────────────── -->
@@ -573,122 +572,6 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 5: the v2 checkpoints through the ladder ─────────────── -->
-      <section class="result" id="w4-r5">
-        <h3><span class="rn">5</span>Second-generation checkpoints on the small-range set: the same ladder</h3>
-        <p class="lead">New policies (EgoVerse: transformer trunk + flow-matching head, trained on the set of 4) through the ladder of 1,
-        from their own training starts. Force through the position servo as in 1&ndash;2, not the torque channel of 3.</p>
-
-        <details class="settings">
-          <summary>Settings</summary>
-          <ul>
-            <li><b>Checkpoints</b>: EgoVerse HPT, 16-block trunk, flow-matching head; 21k steps on the 360 training episodes. Same state inputs as before (joint positions, EMA velocity, EMA force, contacts, 33 ms history, task); joints and forces predicted as <b>changes from the current measured state</b>. Two visual inputs: scene point cloud (PointNet) and <b>RGB-D</b> (4-channel ResNet-18).</li>
-            <li><b>Sampling</b>: each forecast = mean of 128 samples &times; 5 Euler steps (40&ndash;70 ms); noise seeded per episode, reruns bit-identical.</li>
-            <li><b>Episodes</b>: 5 training episodes per task (seeds 5000&ndash;5117), every rollout restores the recorded initial state. 4 &times; 5 &times; 11 conditions = <b>220 rollouts</b>.</li>
-            <li><b>Loop</b>: as 1 &mdash; forecast every 2 states, linear interpolation, velocity feedforward, task-space law (kp 0.3, ki 10, clip 0.12 rad), position-PD actuation.</li>
-            <li><b>Visual timing</b>: every training image, depth map and cloud shows the state <b>2 frames (33 ms) before</b> its proprioception (recorder capture lag, fixed Sep 24, after both collections). The live loop reproduces that lag; replaying a training episode gives depth identical to the stored PNG, RGB at the render noise floor (0.4/255), clouds at the 4096-point resampling floor (19 mm).</li>
-            <li><b>Verified against the training data</b>: input normalisation of the export matches EMA velocity / force / history computed from the raw set (0.000 / 0.02 N / 0.003); task one-hot order correct; outputs are deltas from the current state; force labels SG(7,2)-smoothed.</li>
-          </ul>
-        </details>
-
-        <div class="picker" id="w4r5-pick" role="group" aria-label="Choose a task and a training episode">
-          <label>Task <select class="pk-task"></select></label>
-          <label>Episode <select class="pk-seed"></select></label>
-          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
-        </div>
-        <p class="tnote" style="margin-top:-6px">All six clips below are the <b>same training episode</b>: same seed, same restored initial state (part, hole and robot identical to 0.0), only the reference source differs.</p>
-        <div class="stack">
-          <figure>
-            <p class="lbl"><span class="k">1</span>Expert commands, exact replay <span class="sub">infrastructure check</span></p>
-            <video class="pk-video-1" controls preload="metadata" playsinline></video><figcaption class="pk-cap-1"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k">2</span>Perfect measured-state forecast + force law <span class="sub">no network</span></p>
-            <video class="pk-video-2" controls preload="metadata" playsinline></video><figcaption class="pk-cap-2"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k">3</span>Point-cloud policy on recorded observations <span class="sub">teacher forced</span></p>
-            <video class="pk-video-3" controls preload="metadata" playsinline></video><figcaption class="pk-cap-3"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k">3</span>RGB-D policy on recorded observations <span class="sub">teacher forced</span></p>
-            <video class="pk-video-4" controls preload="metadata" playsinline></video><figcaption class="pk-cap-4"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k b">4</span>Point-cloud policy live <span class="sub">closed loop</span></p>
-            <video class="pk-video-5" controls preload="metadata" playsinline></video><figcaption class="pk-cap-5"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k b">4</span>RGB-D policy live <span class="sub">closed loop</span></p>
-            <video class="pk-video-6" controls preload="metadata" playsinline></video><figcaption class="pk-cap-6"></figcaption>
-          </figure>
-        </div>
-
-        <h4>Outcome, 220 rollouts</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">1 &middot; expert commands, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>&minus;0.2</td></tr>
-            <tr class="dim"><th scope="row">2 &middot; perfect forecast, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>199</td><td>&minus;7.5</td></tr>
-            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>78</td><td>&minus;3.8</td></tr>
-            <tr><th scope="row">3 &middot; point-cloud policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>146</td><td>&minus;2.8</td></tr>
-            <tr><th scope="row">3 &middot; RGB-D policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>125</td><td>&minus;2.9</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; point-cloud policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>281</td><td>&minus;1.2</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; RGB-D policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>279</td><td>&minus;1.9</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Means over the 20 episodes of a row. Rungs 3 and 4 with the null law: 0/20 each (not shown); the law brings the fingers closer while teacher forced (185 &rarr; 146 mm cloud, 202 &rarr; 125 mm RGB-D) and changes nothing live.</p>
-
-        <h4>Departure from the recording</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>part leaves the recorded path (&gt; 10 mm) at frame</th><th>hand forecast error at 33 / 267 ms, rad</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">1 &middot; expert commands</th><td>0.000</td><td>0.000</td><td>never</td><td>&ndash;</td></tr>
-            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0.02 to 0.04</td><td>0.22 to 0.59</td><td>25 to 39</td><td>0 by construction</td></tr>
-            <tr><th scope="row">3 &middot; policy, recorded observations</th><td>0.02 to 0.04</td><td>0.21 to 0.70</td><td>21 to 39</td><td>0.015 / 0.07 to 0.12 <span class="sub">no motion 0.12 to 0.24</span></td></tr>
-            <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.13 to 2.2</td><td>1.4 to 2.0</td><td>20 to 41</td><td>0.19 to 0.40 / 0.21 to 0.39 <span class="sub">worse than no motion</span></td></tr>
-          </tbody>
-        </table></div>
-
-        <figure class="stack" style="margin-top:18px">
-          <img src="assets/updates/week4/v2/departure_v2.png" alt="Part position error versus the recording over time, four tasks, for the perfect forecast, the teacher-forced and the live point-cloud and RGB-D policies" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Part position error against the recording, first training episode of each task. Perfect forecast: part kept within ~50 mm, never seated. Teacher forced: on the path until the grasp, part lost there. Live: off the path before the hand reaches the part.</figcaption>
-        </figure>
-
-        <div class="callout">
-          <p><b>What changed, what did not</b></p>
-          <ul style="margin:0">
-            <li><b>Same outcome as the Week 3 checkpoints</b>: replay 20/20, everything else 0/20.</li>
-            <li><b>The fit is better</b> (rung 3): hand forecast 0.015 rad at 33 ms; arm within 0.02&ndash;0.04 rad of the recording up to the grasp; force bias &minus;2.8 N (was &minus;5.2). Then the failure of 1, rung 2: a measured-state reference has no preload, the part slips.</li>
-            <li><b>Live still diverges at once</b>: hand &gt; 0.2 rad off within 4&ndash;10 frames. First forecast identical to rung 3 (same noise seed); the second, the first to see the robot's own state, differs by 0.1&ndash;0.2 rad. Velocity/history inputs still carry ~60&nbsp;% of the near-term motion (point cloud; RGB-D less).</li>
-            <li><b>Point cloud still ignored at reset</b>: with the sampling noise fixed, the state-0 forecast is identical across the 5 starts of a task. RGB-D varies with the scene and is the one that reaches the part live.</li>
-            <li><b>Sampling jitter</b>: two noise seeds move a forecast by 0.006&ndash;0.008 rad, as much as the true spread of first moves across starts.</li>
-          </ul>
-        </div>
-
-        <h4>The controller path breaks even the expert's own commands</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>expert commands as the reference, executed with &hellip;</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">hold, no lead, no law <span class="sub">exact replay</span></th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td></tr>
-            <tr class="hi"><th scope="row">+ force law only</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td></tr>
-            <tr><th scope="row">+ linear interpolation only</th><td>0/5</td><td>1/5</td><td>3/5</td><td>0/5</td><td>4/20</td></tr>
-            <tr><th scope="row">+ velocity feedforward only</th><td>0/5</td><td>0/5</td><td>1/5</td><td>0/5</td><td>1/20</td></tr>
-            <tr><th scope="row">the normal path (all three)</th><td>0/5</td><td>0/5</td><td>1/5</td><td>0/5</td><td>1/20</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Same 20 starts. Force law: exact until the first finger contact, then the offset reaches its 0.12 rad clip within 4 frames on a ~1 N force error and knocks the part (tight insertion 5002: part 65 mm off, never seated). Even a half-frame smoothing of the commands loses 16 of 20.</p>
-
-        <div class="callout">
-          <p><b>Consequences</b></p>
-          <ul style="margin:0">
-            <li>This expert/task tolerates about 0.05 rad or half a frame of reference perturbation; the force law as tuned (built to <i>add</i> a preload to measured-state references) is destructive on any reference that already contains the squeeze.</li>
-            <li>A command-predicting policy must be deployed with hold interpolation, no velocity lead, and the law off or re-tuned as a small corrector (gains an order of magnitude lower, clip ~0.02 rad) &mdash; validated on the command oracle first.</li>
-            <li>Still to change in the policy: predict <code>joint_target</code>; drop the velocity and history inputs; more samples or chunk averaging; point-cloud crop.</li>
-          </ul>
-        </div>
-      </section>
-
     </article>
 
     <article class="entry" id="week-3">
@@ -904,36 +787,6 @@ html{scroll-behavior:smooth}
               + "  ·  top: force as a position offset, bottom: the same force as joint torque.";
           });
         })();
-        /* week 4, 5: the v2 checkpoints, all six rungs of ONE training episode; task + episode pickers */
-        (function(){
-          const root = document.getElementById("w4r5-pick"), r = root.parentElement;
-          const selT = root.querySelector(".pk-task"), selS = root.querySelector(".pk-seed");
-          const vids = [1, 2, 3, 4, 5, 6].map(k => r.querySelector(".pk-video-" + k)), caps = [1, 2, 3, 4, 5, 6].map(k => r.querySelector(".pk-cap-" + k));
-          const C = ["oraclecmd_null", "oracle_task_space", "pointcloud_task_space_recobs", "rgbd_task_space_recobs", "pointcloud_task_space", "rgbd_task_space"];
-          const T = [{id:"tight_insertion", label:"Tight insertion"},{id:"beam_assembly_step1", label:"Beam assembly, step 1"},{id:"beam_assembly_step2", label:"Beam assembly, step 2"},{id:"screwing", label:"Screwing"}];
-          /* per episode, per rung: the env's verdict (goals reached, +R = retract ok, and why it ended) */
-          const R = {"beam_assembly_step1":{"5001":["success","1/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5024":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5048":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5073":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5099":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]},"beam_assembly_step2":{"5001":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5025":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5050":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5077":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5100":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]},"screwing":{"5000":["success","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5025":["success","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5049":["success","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5084":["success","0/10, frame_cap","0/10, frame_cap","0/10, frame_cap","0/10, timeout","0/10, timeout"],"5111":["success","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"]},"tight_insertion":{"5002":["success","0/2, frame_cap","0/2, fall","0/2, fall","0/2, timeout","0/2, timeout"],"5030":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5055":["success","0/2, frame_cap","0/2, fall","0/2, fall","0/2, timeout","0/2, timeout"],"5086":["success","0/2, frame_cap","1/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5117":["success","0/2, frame_cap","0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]}};
-          const END = {frame_cap: "reference held after the recording ended, no verdict", timeout: "10 s without progress", fall: "part fell"};
-          T.forEach((t, i) => selT.add(new Option(t.label, i)));
-          function fillSeeds(){
-            const seeds = Object.keys(R[T[Number(selT.value)].id]);
-            selS.innerHTML = ""; seeds.forEach(s => selS.add(new Option("seed " + s, s)));
-          }
-          function show(){
-            const t = T[Number(selT.value)], s = selS.value, res = R[t.id][s];
-            vids.forEach((v, i) => {
-              v.pause(); v.src = "assets/updates/week4/v2/clips/" + t.id + "_seed" + s + "_" + C[i] + ".mp4"; v.load();
-              const [g, why] = res[i].split(", ");
-              caps[i].textContent = t.label + "  ·  training episode seed " + s + "  ·  " + (why ? "goals " + g + ", " + (END[why] || why) : "success, bit-identical to the recording");
-            });
-          }
-          selT.addEventListener("change", () => { fillSeeds(); show(); });
-          selS.addEventListener("change", show);
-          const step = d => { const n = selS.options.length; selS.selectedIndex = (selS.selectedIndex + n + d) % n; show(); };
-          root.querySelector(".pk-prev").addEventListener("click", () => step(-1));
-          root.querySelector(".pk-next").addEventListener("click", () => step(1));
-          fillSeeds(); show();
-        })();
         /* week 3, result 1: overlay video + time-series plot, four tasks */
         (function(){
           const r1 = document.getElementById("w3-r1");
@@ -1006,7 +859,6 @@ html{scroll-behavior:smooth}
       ["w4-r2", "2 · Why live drifts"],
       ["w4-r3", "3 · Actuation channel"],
       ["w4-r4", "4 · Small-range set"],
-      ["w4-r5", "5 · v2 checkpoints"],
     ["week-3", "Week 3", 1],
       ["w3-r1", "1 · Offline prediction"],
       ["w3-r2", "2 · Closed loop"],
