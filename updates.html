@@ -488,7 +488,7 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
           <ul style="margin:6px 0 14px; font-size:14.5px">
             <li><b>Checkpoints</b>: EgoVerse HPT, 16-block transformer trunk, flow-matching head; 21k steps on the 360 training episodes of the small-range set. Same state inputs as before (joint positions, EMA velocity, EMA force, contacts, 33 ms history, task); joints and forces predicted as <b>changes from the current measured state</b>. Two visual inputs: scene point cloud (PointNet) and <b>RGB-D</b> (4-channel ResNet-18); no RGB-only model this time.</li>
             <li><b>Sampling</b>: the head draws random samples; each forecast is the mean of 128 samples &times; 5 Euler steps (40&ndash;70 ms). Noise seeded per episode, so a rerun is bit-identical.</li>
-            <li><b>Episodes</b>: 5 training episodes per task, evenly spaced through the train split (seeds 5000&ndash;5117); every rollout restores the recorded initial state. 4 tasks &times; 5 episodes &times; 5 conditions = <b>100 rollouts</b> (rung 2 and the position-only law are still running on the same starts, 120 more).</li>
+            <li><b>Episodes</b>: 5 training episodes per task, evenly spaced through the train split (seeds 5000&ndash;5117); every rollout restores the recorded initial state. 4 tasks &times; 5 episodes &times; 11 conditions (rungs 1&ndash;4, two visual inputs, force law and position-only) = <b>220 rollouts</b>, one cold-start process each.</li>
             <li><b>Controller</b>: as Result 3 &mdash; forecast every 2 states, linear interpolation at 120 Hz, velocity feedforward, task-space force law (kp 0.3, ki 10, clip 0.12 rad), position-PD actuation.</li>
             <li><b>Visual timing</b>: every image, depth map and cloud in both datasets shows the state <b>two frames (33 ms) before</b> the proprioception it is paired with &mdash; a capture lag in the recorder, fixed on Sep 24, after both collections. The live loop reproduces that lag on purpose so the policy sees what it was trained on. Checked by replaying a training episode: live depth identical to the stored one pixel for pixel, RGB at the renderer's noise floor (0.4/255), cloud at the 4096-point resampling floor (19 mm). Without the lag the RGB-D forecast on the same state moves by up to 0.38 rad.</li>
           </ul>
@@ -522,25 +522,27 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
           </figure>
         </div>
 
-        <h4>Outcome, 100 rollouts</h4>
+        <h4>Outcome, 220 rollouts</h4>
         <div class="tblwrap"><table class="res">
           <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest keypoint, mm</th><th>force bias, N</th><th>how it ends</th></tr></thead>
           <tbody>
             <tr><th scope="row">1 &middot; expert commands, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>&minus;0.2</td><td>success, bit-identical to the recording</td></tr>
-            <tr class="dim"><th scope="row">2 &middot; perfect forecast + force law</th><td colspan="8">running</td></tr>
+            <tr class="dim"><th scope="row">2 &middot; perfect forecast, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>199</td><td>&minus;7.5</td><td>part slips at the grasp</td></tr>
+            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>78</td><td>&minus;3.8</td><td>part held near the goal but never seated (one sub-goal in 20)</td></tr>
             <tr><th scope="row">3 &middot; point-cloud policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>146</td><td>&minus;2.8</td><td>part slips or is knocked at the grasp (2 fall off the table)</td></tr>
             <tr><th scope="row">3 &middot; RGB-D policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>125</td><td>&minus;2.9</td><td>same</td></tr>
             <tr class="hi"><th scope="row">4 &middot; point-cloud policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>281</td><td>&minus;1.2</td><td>10 s no-progress timeout; part rarely touched</td></tr>
             <tr class="hi"><th scope="row">4 &middot; RGB-D policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>279</td><td>&minus;1.9</td><td>10 s no-progress timeout; part pushed, not grasped</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Successes per task over 5 training episodes. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 20 episodes of the row.</p>
+        <p class="tnote">Successes per task over 5 training episodes. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 20 episodes of the row. Rungs 3 and 4 were also run with the null law (0/20 each, not shown): the force law brings the fingers closer while teacher forced (closest keypoint 185 &rarr; 146 mm cloud, 202 &rarr; 125 mm RGB-D) and changes nothing live (281 mm either way).</p>
 
         <h4>Departure from the recording</h4>
         <div class="tblwrap"><table class="res">
           <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>part leaves the recorded path (&gt; 10 mm) at frame</th><th>hand forecast error at 33 ms / 267 ms, rad</th></tr></thead>
           <tbody>
             <tr><th scope="row">1 &middot; expert commands</th><td>0.000</td><td>0.000</td><td>never</td><td>&ndash;</td></tr>
+            <tr><th scope="row">2 &middot; perfect forecast + force law</th><td>0.02 to 0.04 <span class="sub">beam 2 up to 0.14</span></td><td>0.22 to 0.59</td><td>25 to 39</td><td>0 by construction</td></tr>
             <tr><th scope="row">3 &middot; policy, recorded observations</th><td>0.02 to 0.04 <span class="sub">beam 2 up to 0.21</span></td><td>0.21 to 0.70</td><td>21 to 39</td><td>0.015 / 0.07 to 0.12 <span class="sub">no-motion 0.12 to 0.24</span></td></tr>
             <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.13 to 2.2</td><td>1.4 to 2.0</td><td>20 to 41</td><td>0.19 to 0.40 / 0.21 to 0.39 <span class="sub">worse than no motion</span></td></tr>
           </tbody>
@@ -549,13 +551,14 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/v2/departure_v2.png" alt="Part position error versus the recording over time, four tasks, for the teacher-forced and the live point-cloud and RGB-D policies" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Part position error against the recording, first training episode of each task, the same episodes as the videos. Teacher forced, both policies follow the recording until the grasp and lose the part there; live, both are off the path before the hand reaches the part.</figcaption>
+          <figcaption>Part position error against the recording, first training episode of each task, the same episodes as the videos. The perfect forecast keeps the part within ~50 mm but never seats it; teacher forced, both policies follow the recording until the grasp and lose the part there; live, both are off the path before the hand reaches the part.</figcaption>
         </figure>
 
         <div class="callout">
           <p><b>Key point</b></p>
           <ul style="margin:0">
-            <li><b>Same result as the Week 3 checkpoints:</b> replay 20/20, every policy rung 0/20 &mdash; 0 of 80 policy rollouts on the policies' own training starts.</li>
+            <li><b>Same result as the Week 3 checkpoints:</b> replay 20/20, everything else 0/20 &mdash; one sub-goal in 200 rollouts on the policies' own training starts.</li>
+            <li><b>Rung 2, 0/20:</b> a perfect measured-state forecast still loses the part at the grasp (hand 0.2&ndash;0.6 rad behind the expert's command, bias &minus;3.8 N with the force law, &minus;7.5 N without). The shorter small-range episodes keep the part closer than in Result 3 (78 mm vs 124 mm) but never seat it. The reference type is the limit, exactly as before.</li>
             <li><b>Rung 3, the fit is fine:</b> hand forecast 0.015 rad at 33 ms and 0.07&ndash;0.12 rad at 267 ms (2&times; better than no motion); arm within 0.02&ndash;0.04 rad of the recording up to the grasp. Then the failure of Result 3, rung 2: at the grasp the hand is 0.2&ndash;0.7 rad off and the part is knocked or slips in 20/20. Predicting changes of the <i>measured</i> state still gives a reference with no preload (force bias &minus;2.8 N; Week 3 checkpoints &minus;5.2 N).</li>
             <li><b>Rung 4 diverges at once:</b> hand &gt; 0.2 rad off the recording within 4&ndash;10 frames. First forecast identical to rung 3 (10<sup>&minus;7</sup> rad, same noise seed); the second one, the first that sees the robot's own state, already differs by 0.1&ndash;0.2 rad on the hand. From there the loop compounds; the part is pushed (RGB-D) or never touched (point cloud, peak fingertip force &lt; 3 N on tight insertion and beam 1).</li>
             <li><b>The first move now points the right way</b> (cosine +0.8 to +1.0 with the expert; Week 3: &minus;0.34) but at 0.5&ndash;0.6&times; its speed &mdash; and on a &plusmn;1 cm reset range the dataset-average move <i>is</i> nearly the right one. With the sampling noise held fixed, the point-cloud policy's state-0 forecast is <b>identical across the 5 starts</b> of a task (spread 0.000 rad): still blind to the scene at reset. The RGB-D forecast does vary with the scene (0.003&ndash;0.06 rad).</li>
