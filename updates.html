@@ -292,8 +292,8 @@ html{scroll-behavior:smooth}
       <ul class="brief">
         <li><b>1</b> Four-rung evaluation ladder on training starts: exact replay 20/20, every other rung 0/20.</li>
         <li><b>2</b> Why the live rollout drifts: the forecast is mostly a copy of the velocity input.</li>
-        <li><b>3</b> A small-range dataset, 100 episodes per task next to one base episode, for overfitting first.</li>
-        <li><b>4</b> Actuation channel, position offset vs feedforward torque: not the bottleneck.</li>
+        <li><b>3</b> Actuation channel, position offset vs feedforward torque: not the bottleneck.</li>
+        <li><b>4</b> A small-range dataset, 100 episodes per task next to one base episode, for overfitting first.</li>
       </ul>
 
       <!-- ─────────────── 1: the in-domain ladder ─────────────── -->
@@ -437,9 +437,75 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 3: the small-range dataset ─────────────── -->
+      <!-- ─────────────── 3: actuation channel ─────────────── -->
       <section class="result" id="w4-r3">
-        <h3><span class="rn">3</span>A small-range dataset for overfitting first</h3>
+        <h3><span class="rn">3</span>Actuation channel: position offset vs feedforward torque</h3>
+        <p class="lead">Force so far = command the joint <b>past</b> the contact, so the servo's tracking error becomes the squeeze
+        (<code>dq = &minus;K<sup>&minus;1</sup>J<sup>T</sup>f</code>). Objection: position control is the wrong channel for a closed force loop.
+        Test: the same commanded force delivered as joint torque (<code>&tau; = &minus;J<sup>T</sup>f</code>).</p>
+
+        <details class="settings">
+          <summary>Settings</summary>
+          <ul>
+            <li><b>Episodes</b>: 12 perfect expert episodes, 3 per task; 2 conditions = <b>24 rollouts</b>, one cold-start process each.</li>
+            <li><b>Reference</b>: oracle chunk policy re-planned every 12 frames from the current state, so both arms share it only until their control diverges. Measured joint states, so the law must supply the preload (rung 2 of 1).</li>
+            <li><b>Position arm</b>: task-space law, kp 0.3, ki 10, offset clip 0.12 rad.</li>
+            <li><b>Torque arm</b>: same commanded force as joint torque, clipped at the servo limits (0.4 to 3.3 N&middot;m); position target keeps the reference + contact-point channel only.</li>
+          </ul>
+        </details>
+
+        <h4>Same actuator, different limit</h4>
+        <ul>
+          <li>Implicit PD torque = <code>K(q* &minus; q) + &tau;<sub>ff</sub></code>. Position adds <code>K&middot;dq = &minus;J<sup>T</sup>f</code>, torque adds <code>&minus;J<sup>T</sup>f</code>: <b>identical commanded torque</b>.</li>
+          <li>Only the saturation differs: the 0.12 rad offset clip is a per-joint torque cap of 0.11 N&middot;m on the distal joints, vs a servo limit up to 3.3 N&middot;m.</li>
+          <li>Lifting the position clip delivers +8.50 N at a 20 N request vs +8.77 N for torque: the gap is the <b>clip</b>, not the channel.</li>
+          <li>Both channels deliver only 0.4 to 0.5 N per newton asked, even unsaturated.</li>
+        </ul>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>force requested, N</th><th>position: peak offset, rad</th><th>position: delivered, N</th><th>torque: peak torque, N&middot;m</th><th>torque: delivered, N</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">2</th><td>0.059</td><td>+0.98</td><td>0.09</td><td>+1.00</td></tr>
+            <tr><th scope="row">5</th><td>0.120 <span class="sub">at the clip</span></td><td>+1.93</td><td>0.23</td><td>+1.94</td></tr>
+            <tr><th scope="row">10</th><td>0.120 <span class="sub">at the clip</span></td><td>+2.47</td><td>0.46</td><td>+3.53</td></tr>
+            <tr class="hi"><th scope="row">20</th><td>0.120 <span class="sub">at the clip</span></td><td>+3.88</td><td>0.93</td><td>+8.77</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Tight insertion, frame 128, thumb loaded at 19.3 N. Delivered = mean pad force over a 12-step hold minus the same hold with nothing applied. Below the clip the two agree to 1&ndash;2 %.</p>
+
+        <h4>Closed-loop outcome, 24 rollouts</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>force channel</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>sub-goals</th><th>dropped</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
+          <tbody>
+            <tr class="hi"><th scope="row">position offset <span class="sub">as before</span></th><td>0/3</td><td><b>3/3</b></td><td>0/3</td><td>0/3</td><td><b>3/12</b></td><td>7</td><td>7/12</td><td>97</td><td>&minus;3.60</td></tr>
+            <tr><th scope="row">feedforward torque</th><td>0/3</td><td>0/3</td><td>0/3</td><td>0/3</td><td>0/12</td><td>6</td><td>6/12</td><td>143</td><td>&minus;3.31</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Success = all sub-goals + retract. Sub-goals: every sub-goal reached across the 12 rollouts; closest keypoint and force bias are means over them.</p>
+
+        <div class="picker" id="w4r3-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <figure class="stack">
+          <video class="pk-video" controls preload="auto" playsinline loop></video>
+          <figcaption class="pk-cap">Same start and reference source in both rows. Top: force as a position offset. Bottom: the same force as joint torque.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <p><b>Key points</b></p>
+          <ul style="margin:0">
+            <li><b>The channel is not the bottleneck</b>: torque loses the three beam-step-1 episodes position wins, and that is the whole gap. Torque has the smallest force bias of any setting so far: best force tracking, worst task.</li>
+            <li><b>As the mechanism predicts</b>: a wider clip only buys more squeeze, and wider clips were already measured harmful in Weeks 1&ndash;2 (clip 0.20 rad: 0 of 12).</li>
+            <li><b>One lead</b>: screwing seed 0, torque 6 of 10 sub-goals with the part held; position 0 and dropped. Single episode.</li>
+            <li><b>Off-simulator the objection stands</b>: stiff hardware servos, bandwidth, no torque interface. These simulated servos already act as a compliant force source.</li>
+            <li><b>The real limit is unchanged</b>: a per-fingertip force law cannot reconstruct a preload the reference never contained (1, rung 2).</li>
+          </ul>
+        </div>
+      </section>
+      <!-- ─────────────── 4: the small-range dataset ─────────────── -->
+      <section class="result" id="w4-r4">
+        <h3><span class="rn">4</span>A small-range dataset for overfitting first</h3>
         <p class="lead">Same expert, physics and format as the Week 3 set; every episode starts next to one recorded base episode.
         A set the policy should be able to reproduce, to separate a modelling problem from a coverage problem.</p>
 
@@ -506,72 +572,6 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 4: actuation channel ─────────────── -->
-      <section class="result" id="w4-r4">
-        <h3><span class="rn">4</span>Actuation channel: position offset vs feedforward torque</h3>
-        <p class="lead">Force so far = command the joint <b>past</b> the contact, so the servo's tracking error becomes the squeeze
-        (<code>dq = &minus;K<sup>&minus;1</sup>J<sup>T</sup>f</code>). Objection: position control is the wrong channel for a closed force loop.
-        Test: the same commanded force delivered as joint torque (<code>&tau; = &minus;J<sup>T</sup>f</code>).</p>
-
-        <details class="settings">
-          <summary>Settings</summary>
-          <ul>
-            <li><b>Episodes</b>: 12 perfect expert episodes, 3 per task; 2 conditions = <b>24 rollouts</b>, one cold-start process each.</li>
-            <li><b>Reference</b>: oracle chunk policy re-planned every 12 frames from the current state, so both arms share it only until their control diverges. Measured joint states, so the law must supply the preload (rung 2 of 1).</li>
-            <li><b>Position arm</b>: task-space law, kp 0.3, ki 10, offset clip 0.12 rad.</li>
-            <li><b>Torque arm</b>: same commanded force as joint torque, clipped at the servo limits (0.4 to 3.3 N&middot;m); position target keeps the reference + contact-point channel only.</li>
-          </ul>
-        </details>
-
-        <h4>Same actuator, different limit</h4>
-        <ul>
-          <li>Implicit PD torque = <code>K(q* &minus; q) + &tau;<sub>ff</sub></code>. Position adds <code>K&middot;dq = &minus;J<sup>T</sup>f</code>, torque adds <code>&minus;J<sup>T</sup>f</code>: <b>identical commanded torque</b>.</li>
-          <li>Only the saturation differs: the 0.12 rad offset clip is a per-joint torque cap of 0.11 N&middot;m on the distal joints, vs a servo limit up to 3.3 N&middot;m.</li>
-          <li>Lifting the position clip delivers +8.50 N at a 20 N request vs +8.77 N for torque: the gap is the <b>clip</b>, not the channel.</li>
-          <li>Both channels deliver only 0.4 to 0.5 N per newton asked, even unsaturated.</li>
-        </ul>
-
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>force requested, N</th><th>position: peak offset, rad</th><th>position: delivered, N</th><th>torque: peak torque, N&middot;m</th><th>torque: delivered, N</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">2</th><td>0.059</td><td>+0.98</td><td>0.09</td><td>+1.00</td></tr>
-            <tr><th scope="row">5</th><td>0.120 <span class="sub">at the clip</span></td><td>+1.93</td><td>0.23</td><td>+1.94</td></tr>
-            <tr><th scope="row">10</th><td>0.120 <span class="sub">at the clip</span></td><td>+2.47</td><td>0.46</td><td>+3.53</td></tr>
-            <tr class="hi"><th scope="row">20</th><td>0.120 <span class="sub">at the clip</span></td><td>+3.88</td><td>0.93</td><td>+8.77</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Tight insertion, frame 128, thumb loaded at 19.3 N. Delivered = mean pad force over a 12-step hold minus the same hold with nothing applied. Below the clip the two agree to 1&ndash;2 %.</p>
-
-        <h4>Closed-loop outcome, 24 rollouts</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>force channel</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>sub-goals</th><th>dropped</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
-          <tbody>
-            <tr class="hi"><th scope="row">position offset <span class="sub">as before</span></th><td>0/3</td><td><b>3/3</b></td><td>0/3</td><td>0/3</td><td><b>3/12</b></td><td>7</td><td>7/12</td><td>97</td><td>&minus;3.60</td></tr>
-            <tr><th scope="row">feedforward torque</th><td>0/3</td><td>0/3</td><td>0/3</td><td>0/3</td><td>0/12</td><td>6</td><td>6/12</td><td>143</td><td>&minus;3.31</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Success = all sub-goals + retract. Sub-goals: every sub-goal reached across the 12 rollouts; closest keypoint and force bias are means over them.</p>
-
-        <div class="picker" id="w4r3-pick" role="group" aria-label="Choose a task">
-          <label>Task <select class="pk-task"></select></label>
-          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
-        </div>
-        <figure class="stack">
-          <video class="pk-video" controls preload="auto" playsinline loop></video>
-          <figcaption class="pk-cap">Same start and reference source in both rows. Top: force as a position offset. Bottom: the same force as joint torque.</figcaption>
-        </figure>
-
-        <div class="callout">
-          <p><b>Key points</b></p>
-          <ul style="margin:0">
-            <li><b>The channel is not the bottleneck</b>: torque loses the three beam-step-1 episodes position wins, and that is the whole gap. Torque has the smallest force bias of any setting so far: best force tracking, worst task.</li>
-            <li><b>As the mechanism predicts</b>: a wider clip only buys more squeeze, and wider clips were already measured harmful in Weeks 1&ndash;2 (clip 0.20 rad: 0 of 12).</li>
-            <li><b>One lead</b>: screwing seed 0, torque 6 of 10 sub-goals with the part held; position 0 and dropped. Single episode.</li>
-            <li><b>Off-simulator the objection stands</b>: stiff hardware servos, bandwidth, no torque interface. These simulated servos already act as a compliant force source.</li>
-            <li><b>The real limit is unchanged</b>: a per-fingertip force law cannot reconstruct a preload the reference never contained (1, rung 2).</li>
-          </ul>
-        </div>
-      </section>
     </article>
 
     <article class="entry" id="week-3">
@@ -755,9 +755,9 @@ html{scroll-behavior:smooth}
             cap.textContent = t.label + "  ·  training episode seed 1000  ·  all four rungs start from the same recorded state";
           });
         })();
-        /* week 4, 3 (dataset): base episode next to one small-range episode, four tasks */
+        /* week 4, 4 (dataset): base episode next to one small-range episode, four tasks */
         (function(){
-          const r = document.getElementById("w4-r3");
+          const r = document.getElementById("w4-r4");
           const vb = r.querySelector(".pk-video-base"), vs = r.querySelector(".pk-video-small");
           const cb = r.querySelector(".pk-cap-base"), cs = r.querySelector(".pk-cap-small");
           const T = [{id:"tight_insertion", label:"Tight insertion", base:1000, small:5002},
@@ -772,9 +772,9 @@ html{scroll-behavior:smooth}
             cs.textContent = t.label + "  \u00b7  small-range episode, seed " + t.small;
           });
         })();
-        /* week 4, 4: position offset above feedforward torque, one episode per task */
+        /* week 4, 3: position offset above feedforward torque, one episode per task */
         (function(){
-          const r = document.getElementById("w4-r4");
+          const r = document.getElementById("w4-r3");
           const vid = r.querySelector(".pk-video"), cap = r.querySelector(".pk-cap");
           const T = [{id:"tight_insertion", label:"Tight insertion", seed:2, note:"position 1 of 2 sub-goals and held; torque dropped the part at frame 104"},
                      {id:"beam_assembly_step1", label:"Beam assembly, step 1", seed:2, note:"position placed the beam, 2 of 2 + retract; torque dropped it at frame 105"},
@@ -857,8 +857,8 @@ html{scroll-behavior:smooth}
     ["week-4", "Week 4", 1],
       ["w4-r1", "1 · In-domain ladder"],
       ["w4-r2", "2 · Why live drifts"],
-      ["w4-r3", "3 · Small-range set"],
-      ["w4-r4", "4 · Actuation channel"],
+      ["w4-r3", "3 · Actuation channel"],
+      ["w4-r4", "4 · Small-range set"],
     ["week-3", "Week 3", 1],
       ["w3-r1", "1 · Offline prediction"],
       ["w3-r2", "2 · Closed loop"],
