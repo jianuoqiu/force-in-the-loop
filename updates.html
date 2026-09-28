@@ -189,7 +189,7 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
       <div class="wk"><h2>Week 4</h2><span class="dt">Sep 21 &ndash; Sep 27, 2026</span></div>
       <p class="note">Week 3: 0 of 80 closed-loop successes on fresh starts. This week: <b>in-domain</b> evaluation. Every rollout starts from the
       bit-identical initial state of one of the policy's own <b>training</b> episodes, so the recording is a frame-by-frame reference. Same controller,
-      physics and success test throughout; only the source of the reference chunk changes. A dataset section then describes the small-range set built for the next round, and Result 5 tests a standing objection to the controller itself: that generating fingertip force through a position servo is the wrong channel for a closed force loop.</p>
+      physics and success test throughout; only the source of the reference chunk changes. A dataset section then describes the small-range set built for the next round, Result 5 tests a standing objection to the controller itself: that generating fingertip force through a position servo is the wrong channel for a closed force loop, and Result 6 runs the same ladder on the second-generation checkpoints trained on that small-range set.</p>
 
       <section class="result" id="w4-r1">
         <h3><span class="rn">Result 3</span>In-domain closed-loop evaluation: a four-rung ladder</h3>
@@ -477,6 +477,119 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
           </ul>
         </div>
       </section>
+
+      <section class="result" id="w4-r4">
+        <h3><span class="rn">Result 6</span>Second-generation checkpoints on the small-range set: the same ladder, the same outcome</h3>
+        <p class="lead">New policies (transformer trunk + flow-matching head, trained on the small-range set above) through the ladder of Result 3,
+        from their own training starts. Force through the position servo as in Results 1&ndash;4, not the torque channel of Result 5.</p>
+
+        <details class="settings" open>
+          <summary>Experiment settings</summary>
+          <ul style="margin:6px 0 14px; font-size:14.5px">
+            <li><b>Checkpoints</b>: EgoVerse HPT, 16-block transformer trunk, flow-matching head; 21k steps on the 360 training episodes of the small-range set. Same state inputs as before (joint positions, EMA velocity, EMA force, contacts, 33 ms history, task); joints and forces predicted as <b>changes from the current measured state</b>. Two visual inputs: scene point cloud (PointNet) and <b>RGB-D</b> (4-channel ResNet-18); no RGB-only model this time.</li>
+            <li><b>Sampling</b>: the head draws random samples; each forecast is the mean of 128 samples &times; 5 Euler steps (40&ndash;70 ms). Noise seeded per episode, so a rerun is bit-identical.</li>
+            <li><b>Episodes</b>: 5 training episodes per task, evenly spaced through the train split (seeds 5000&ndash;5117); every rollout restores the recorded initial state. 4 tasks &times; 5 episodes &times; 5 conditions = <b>100 rollouts</b> (rung 2 and the position-only law are still running on the same starts, 120 more).</li>
+            <li><b>Controller</b>: as Result 3 &mdash; forecast every 2 states, linear interpolation at 120 Hz, velocity feedforward, task-space force law (kp 0.3, ki 10, clip 0.12 rad), position-PD actuation.</li>
+            <li><b>Visual timing</b>: every image, depth map and cloud in both datasets shows the state <b>two frames (33 ms) before</b> the proprioception it is paired with &mdash; a capture lag in the recorder, fixed on Sep 24, after both collections. The live loop reproduces that lag on purpose so the policy sees what it was trained on. Checked by replaying a training episode: live depth identical to the stored one pixel for pixel, RGB at the renderer's noise floor (0.4/255), cloud at the 4096-point resampling floor (19 mm). Without the lag the RGB-D forecast on the same state moves by up to 0.38 rad.</li>
+          </ul>
+        </details>
+
+        <div class="picker" id="w4r4-pick" role="group" aria-label="Choose a task">
+          <label>Task <select class="pk-task"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous task">&larr;</button><button type="button" class="pk-next" aria-label="Next task">&rarr;</button></span>
+        </div>
+        <div class="stack">
+          <figure>
+            <p class="lbl"><span class="k">1</span>Expert commands, exact replay <span class="sub">infrastructure check</span></p>
+            <video class="pk-video-1" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k">2</span>Perfect measured-state forecast + force law <span class="sub">no network, zero forecast error</span></p>
+            <video class="pk-video-2" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k">3</span>Policy on recorded observations <span class="sub">point-cloud checkpoint, teacher forced</span></p>
+            <video class="pk-video-3" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">4</span>Policy live <span class="sub">point-cloud checkpoint, closed loop</span></p>
+            <video class="pk-video-4" controls preload="auto" playsinline></video>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">4</span>Policy live <span class="sub">RGB-D checkpoint, closed loop</span></p>
+            <video class="pk-video-5" controls preload="auto" playsinline></video>
+            <figcaption class="pk-cap5"></figcaption>
+          </figure>
+        </div>
+
+        <h4>Outcome, 100 rollouts</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest keypoint, mm</th><th>force bias, N</th><th>how it ends</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; expert commands, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>&minus;0.2</td><td>success, bit-identical to the recording</td></tr>
+            <tr class="dim"><th scope="row">2 &middot; perfect forecast + force law</th><td colspan="8">running</td></tr>
+            <tr><th scope="row">3 &middot; point-cloud policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>146</td><td>&minus;2.8</td><td>part slips or is knocked at the grasp (2 fall off the table)</td></tr>
+            <tr><th scope="row">3 &middot; RGB-D policy, recorded observations</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>125</td><td>&minus;2.9</td><td>same</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; point-cloud policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>281</td><td>&minus;1.2</td><td>10 s no-progress timeout; part rarely touched</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; RGB-D policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>279</td><td>&minus;1.9</td><td>10 s no-progress timeout; part pushed, not grasped</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Successes per task over 5 training episodes. Closest keypoint and force bias (measured minus target while engaged, worst fingertip) are means over the 20 episodes of the row.</p>
+
+        <h4>Departure from the recording</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>part leaves the recorded path (&gt; 10 mm) at frame</th><th>hand forecast error at 33 ms / 267 ms, rad</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; expert commands</th><td>0.000</td><td>0.000</td><td>never</td><td>&ndash;</td></tr>
+            <tr><th scope="row">3 &middot; policy, recorded observations</th><td>0.02 to 0.04 <span class="sub">beam 2 up to 0.21</span></td><td>0.21 to 0.70</td><td>21 to 39</td><td>0.015 / 0.07 to 0.12 <span class="sub">no-motion 0.12 to 0.24</span></td></tr>
+            <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.13 to 2.2</td><td>1.4 to 2.0</td><td>20 to 41</td><td>0.19 to 0.40 / 0.21 to 0.39 <span class="sub">worse than no motion</span></td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Ranges across the four tasks, point cloud and RGB-D pooled; frames at 60 Hz. Forecast error = mean |predicted &minus; recorded| of the hand joints at rows 1&ndash;2 and at the last row of the chunk, against the recording's own future; for the live rung only meaningful before the rollout leaves the recording.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/v2/departure_v2.png" alt="Part position error versus the recording over time, four tasks, for the teacher-forced and the live point-cloud and RGB-D policies" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Part position error against the recording, first training episode of each task, the same episodes as the videos. Teacher forced, both policies follow the recording until the grasp and lose the part there; live, both are off the path before the hand reaches the part.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <p><b>Key point</b></p>
+          <ul style="margin:0">
+            <li><b>Same result as the Week 3 checkpoints:</b> replay 20/20, every policy rung 0/20 &mdash; 0 of 80 policy rollouts on the policies' own training starts.</li>
+            <li><b>Rung 3, the fit is fine:</b> hand forecast 0.015 rad at 33 ms and 0.07&ndash;0.12 rad at 267 ms (2&times; better than no motion); arm within 0.02&ndash;0.04 rad of the recording up to the grasp. Then the failure of Result 3, rung 2: at the grasp the hand is 0.2&ndash;0.7 rad off and the part is knocked or slips in 20/20. Predicting changes of the <i>measured</i> state still gives a reference with no preload (force bias &minus;2.8 N; Week 3 checkpoints &minus;5.2 N).</li>
+            <li><b>Rung 4 diverges at once:</b> hand &gt; 0.2 rad off the recording within 4&ndash;10 frames. First forecast identical to rung 3 (10<sup>&minus;7</sup> rad, same noise seed); the second one, the first that sees the robot's own state, already differs by 0.1&ndash;0.2 rad on the hand. From there the loop compounds; the part is pushed (RGB-D) or never touched (point cloud, peak fingertip force &lt; 3 N on tight insertion and beam 1).</li>
+            <li><b>The first move now points the right way</b> (cosine +0.8 to +1.0 with the expert; Week 3: &minus;0.34) but at 0.5&ndash;0.6&times; its speed &mdash; and on a &plusmn;1 cm reset range the dataset-average move <i>is</i> nearly the right one. With the sampling noise held fixed, the point-cloud policy's state-0 forecast is <b>identical across the 5 starts</b> of a task (spread 0.000 rad): still blind to the scene at reset. The RGB-D forecast does vary with the scene (0.003&ndash;0.06 rad).</li>
+            <li><b>Sampling noise is not averaged out:</b> two noise seeds on the same state move the state-0 forecast by 0.006 (cloud) to 0.008 rad (RGB-D) &mdash; as much as the true spread of first moves across starts (0.005&ndash;0.007). The RGB-D policy also moves 0.008 rad mean (0.16 max) on render noise of 0.4/255. Chunk-to-chunk jitter of that size feeds the velocity input below.</li>
+            <li><b>Velocity input still carries the forecast</b> (table): zeroing joint velocity and history drops the point-cloud policy's motion gain from 0.7&ndash;1.0 to 0.3&ndash;0.5. The RGB-D policy leans on it less (0.4&ndash;0.8 zeroed) and is the one that at least reaches the part live.</li>
+          </ul>
+        </div>
+
+        <h4>How much of the forecast is the velocity input</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>policy</th><th>task</th><th>arm, as trained</th><th>arm, velocity inputs zeroed</th><th>hand, as trained</th><th>hand, velocity inputs zeroed</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" rowspan="4">Point cloud</th><td>tight insertion</td><td>0.89</td><td>0.32</td><td>0.76</td><td>0.39</td></tr>
+            <tr><td>beam step 1</td><td>0.96</td><td>0.40</td><td>0.82</td><td>0.47</td></tr>
+            <tr><td>beam step 2</td><td>0.66</td><td>0.30</td><td>0.89</td><td>0.48</td></tr>
+            <tr><td>screwing</td><td>0.96</td><td>0.35</td><td>0.63</td><td>0.25</td></tr>
+            <tr><th scope="row" rowspan="4">RGB-D</th><td>tight insertion</td><td>0.91</td><td>0.66</td><td>0.76</td><td>0.65</td></tr>
+            <tr><td>beam step 1</td><td>1.02</td><td>0.78</td><td>0.83</td><td>0.70</td></tr>
+            <tr><td>beam step 2</td><td>0.63</td><td>0.42</td><td>0.85</td><td>0.67</td></tr>
+            <tr><td>screwing</td><td>0.92</td><td>0.61</td><td>0.62</td><td>0.40</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Motion gain = slope of predicted on recorded joint displacement, forecast row 1 (33 ms), offline on two training episodes per task, same sampling noise for both columns; 1.0 = right amount of motion. &ldquo;Zeroed&rdquo;: joint-velocity and 33 ms history inputs set to 0, everything else unchanged. Compare Result 4: the Week 3 checkpoints fell to 0.1&ndash;0.3.</p>
+
+        <div class="callout">
+          <p><b>Before the next checkpoint</b></p>
+          <ul style="margin:0">
+            <li>Unchanged from Result 4: predict the expert's <b>commands</b> (<code>joint_target</code>), not changes of the measured state; remove the joint-velocity and history inputs.</li>
+            <li>Sampling: 128 averaged samples leave 0.006&ndash;0.008 rad of jitter per forecast &mdash; more samples, or average the overlapping chunks, before the velocity input sees it.</li>
+            <li>Point cloud: the state-0 forecast ignores the cloud entirely; crop to the workspace or centre on the part. RGB-D is the better-behaved input of the two.</li>
+            <li>Recorder: fix the 2-frame capture lag in the next collection (or keep reproducing it at deployment, as here) &mdash; mixing the two timings would put the visual 33 ms off its training position.</li>
+          </ul>
+        </div>
+      </section>
     </article>
 
     <article class="entry" id="week-3">
@@ -690,6 +803,18 @@ table.res tr.dim td,table.res tr.dim th{color:var(--soft)}
             vid.src = "assets/updates/week4/actuation/" + t.id + "_seed" + t.seed + "_actuation.mp4"; vid.load();
             cap.textContent = t.label + "  ·  seed " + t.seed + "  ·  " + t.note
               + "  ·  top: force as a position offset, bottom: the same force as joint torque.";
+          });
+        })();
+        /* week 4, result 6: the ladder on the v2 checkpoints, first training episode of each task */
+        (function(){
+          const r = document.getElementById("w4r4-pick").parentElement;
+          const vids = [1, 2, 3, 4, 5].map(k => r.querySelector(".pk-video-" + k)), cap = r.querySelector(".pk-cap5");
+          const C = ["oraclecmd_null", "oracle_task_space", "pointcloud_task_space_recobs", "pointcloud_task_space", "rgbd_task_space"];
+          const T = [{id:"tight_insertion", label:"Tight insertion", seed:5002},{id:"beam_assembly_step1", label:"Beam assembly, step 1", seed:5001},
+                     {id:"beam_assembly_step2", label:"Beam assembly, step 2", seed:5001},{id:"screwing", label:"Screwing", seed:5000}];
+          picker("w4r4-pick", T, t => {
+            vids.forEach((v, i) => { v.pause(); v.src = "assets/updates/week4/v2/" + t.id + "_seed" + t.seed + "_" + C[i] + ".mp4"; v.load(); });
+            cap.textContent = t.label + "  ·  training episode seed " + t.seed + "  ·  all rungs start from the same recorded state";
           });
         })();
         /* result 1: overlay video + time-series plot, four tasks */
