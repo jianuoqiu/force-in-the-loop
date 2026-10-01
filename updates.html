@@ -120,11 +120,11 @@ details.settings dd b{color:var(--head); font-weight:600}
 .duo figcaption,.stack figcaption{font-size:13px; color:var(--soft); margin-top:6px; line-height:1.45}
 .stack{display:grid; gap:14px; margin:12px 0 4px}
 .stack figure{margin:0}
-.stack .lbl{display:flex; align-items:baseline; gap:10px; font-size:14.5px; color:var(--head); font-weight:600; margin:0 0 6px}
-.stack .lbl .k{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px;
+.stack .lbl,.duo .lbl{display:flex; align-items:baseline; gap:10px; font-size:14.5px; color:var(--head); font-weight:600; margin:0 0 6px}
+.stack .lbl .k,.duo .lbl .k{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px;
                font-size:12.5px; font-weight:700; color:#fff; background:var(--head)}
-.stack .lbl .k.b{background:var(--red)}
-.stack .lbl .sub{font-weight:400; color:var(--soft); font-size:13.5px}
+.stack .lbl .k.b,.duo .lbl .k.b{background:var(--red)}
+.stack .lbl .sub,.duo .lbl .sub{font-weight:400; color:var(--soft); font-size:13.5px}
 .stack video{display:block; width:100%; height:auto; background:#fff; border:1px solid var(--rule2); border-radius:9px}
 .tblwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:8px 0 6px}
 table.res{border-collapse:collapse; width:100%; font-size:13.5px; line-height:1.4; min-width:520px}
@@ -293,10 +293,9 @@ html{scroll-behavior:smooth}
         <li><b>1</b> Four-rung evaluation ladder on training starts: exact replay 20/20, every other rung 0/20.</li>
         <li><b>2</b> Why the live rollout drifts: the forecast is mostly a copy of the velocity input.</li>
         <li><b>3</b> Actuation channel, position offset vs feedforward torque: not the bottleneck.</li>
-        <li><b>4</b> A small-range dataset, 100 episodes per task next to one base episode, for overfitting first.</li>
+        <li><b>4</b> Three small training sets around one base episode per task, for overfitting first: small start range, fixed start, fixed start + pushes.</li>
         <li><b>5</b> Per-task action policies (expert RL actions, no force controller): 0/20 live, but the first policy that carries the part toward the goal (7/20 within 30 mm).</li>
-        <li><b>6</b> Per-task checkpoints (one policy per task, point cloud and RGB-D) on their own training starts: 0/80 live, 1/80 teacher forced.</li>
-        <li><b>7</b> Per-task checkpoints trained on fixed-start sets (with and without push perturbations): 0/160 live, 1/160 teacher forced.</li>
+        <li><b>6</b> Per-task state-forecast checkpoints (point cloud and RGB-D) trained on the three small sets (small-range, fixed start, fixed start + pushes): 0/240 live, 2/240 teacher forced.</li>
       </ul>
 
       <!-- ─────────────── 1: the in-domain ladder ─────────────── -->
@@ -508,45 +507,69 @@ html{scroll-behavior:smooth}
       </section>
       <!-- ─────────────── 4: the small-range dataset ─────────────── -->
       <section class="result" id="w4-r4">
-        <h3><span class="rn">4</span>A small-range dataset for overfitting first</h3>
-        <p class="lead">Same expert, physics and format as the Week 3 set; every episode starts next to one recorded base episode.
-        A set the policy should be able to reproduce, to separate a modelling problem from a coverage problem.</p>
+        <h3><span class="rn">4</span>Small training sets for overfitting first: three variants</h3>
+        <p class="lead">Three sets with the same expert, physics, format and acceptance test as the Week 3 set, all built around one recorded
+        <b>base episode</b> per task. They differ only in what varies between episodes: a small start range, nothing, or pushes on the part during the
+        rollout. 100 verified successes per task each. Policies trained on them are compared in 5 and 7.</p>
+
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th scope="col">set</th><th scope="col">start state</th><th scope="col">what differs between episodes</th><th scope="col">seeds</th><th scope="col">tag in summary.json</th><th scope="col">camera timing</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">small range</th><td>part xy &plusmn;1 cm, tilt &le;10&deg; about the base pose; hole xy &plusmn;1 cm</td><td>the start</td><td>5000 up</td><td><code>neighborhood</code></td><td>lag 2 states (as Week 3)</td></tr>
+            <tr><th scope="row">fixed start</th><td>the base pose exactly</td><td>nothing: every episode is the same trajectory</td><td>6000 up</td><td><code>fixed_start</code></td><td>lag 0</td></tr>
+            <tr><th scope="row">fixed start + pushes</th><td>the base pose exactly</td><td>random impulses on the part, so the expert's recoveries</td><td>7000 up</td><td><code>fixed_start_perturbed</code></td><td>lag 0</td></tr>
+          </tbody>
+        </table></div>
 
         <details class="settings">
           <summary>Collection</summary>
           <ul>
-            <li><b>Base episode</b>: shortest accepted Week 3 episode per task (seeds 1000, 1036, 1018, 1050).</li>
-            <li><b>Range</b>: part xy &plusmn;1 cm, tilt &le;10&deg; about the base pose; hole xy &plusmn;1 cm; robot start fixed; goal-observation noise off. A range at all because expert and simulator are deterministic.</li>
-            <li><b>Seeds</b>: 5000 upward, one cold-start process each; Week 3 acceptance test unchanged.</li>
-            <li><b>Per episode</b>: same arrays as Week 3; depth, point cloud and wrist views re-rendered afterwards.</li>
-            <li><b>Cost</b>: 38 s per seed (55 s screwing), 4 tasks in 5 h, 8.2 GB.</li>
+            <li><b>Base episode</b>: shortest accepted Week 3 episode per task (seeds 1000, 1036, 1018, 1050); robot start fixed, goal-observation noise off in all three sets.</li>
+            <li><b>Why a range or pushes at all</b>: expert and simulator are deterministic, so a fixed start without pushes gives one trajectory per task (verified bit-identical across all 100 seeds).</li>
+            <li><b>Pushes</b>: play2perfect's own wrench randomisation on the part, re-enabled at half the training strength. Each 60 Hz step, with probability 0.05, a one-step impulse N(0,1) &times; mass &times; 10 m/s<sup>2</sup> (part 58 g &rarr; ~0.6 N per axis, median 0.5 N, max 3.5 N); torque likewise at 1 m/s<sup>2</sup>. From the first frame (play2perfect's &ldquo;lifted&rdquo; gate never triggers on these tasks), off in the retract phase. The wrench applied in every frame is stored as <code>object_ext_force</code> / <code>object_ext_torque</code>.</li>
+            <li><b>Seeds</b>: one cold-start process per seed; the seed drives the start draw or the impulse sequence, and re-runs bit-exactly.</li>
+            <li><b>Per episode</b>: same arrays as Week 3; depth, point cloud and wrist views re-rendered afterwards; <code>config.dataset_variant</code> and <code>config.perturbation</code> record how it was collected.</li>
+            <li><b>Cost</b>: 38 s per seed (55 s screwing), ~5 h per set; 17 / 15 / 20 GB with all modalities.</li>
           </ul>
         </details>
 
         <div class="tblwrap"><table class="res">
-          <thead><tr><th scope="col">task</th><th scope="col">base seed</th><th scope="col">seeds tried</th><th scope="col">accepted</th><th scope="col">rejected (reason)</th><th scope="col">frames min / median / max</th><th scope="col">Week 3 set: accepted / tried</th><th scope="col">Week 3 frames min / mean / max</th></tr></thead>
+          <thead><tr><th scope="col">task</th><th scope="col">set</th><th scope="col">seeds tried</th><th scope="col">accepted</th><th scope="col">rejected (reason)</th><th scope="col">frames min / median / max</th><th scope="col">spread: hand joints vs first episode, mean / max (rad)</th></tr></thead>
           <tbody>
-            <tr><th scope="row">tight insertion</th><td>1000</td><td>118</td><td style="white-space:nowrap">100 (85 %)</td><td>18 (14 dropped, 4 timeout)</td><td>103 / 124 / 238</td><td>50 / 66 (76 %)</td><td>116 / 197 / 653</td></tr>
-            <tr><th scope="row">beam assembly, step 1</th><td>1036</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>105 / 114 / 148</td><td>50 / 58 (86 %)</td><td>113 / 205 / 604</td></tr>
-            <tr><th scope="row">beam assembly, step 2</th><td>1018</td><td>101</td><td style="white-space:nowrap">100 (99 %)</td><td>1 (dropped)</td><td>121 / 128 / 186</td><td>50 / 78 (64 %)</td><td>127 / 230 / 548</td></tr>
-            <tr><th scope="row">screwing</th><td>1050</td><td>112</td><td style="white-space:nowrap">100 (89 %)</td><td>12 (11 timeout, 1 stalled)</td><td>437 / 606 / 903</td><td>50 / 80 (62 %)</td><td>472 / 671 / 1037</td></tr>
+            <tr><th scope="row" rowspan="3">tight insertion</th><td>small range</td><td>118</td><td style="white-space:nowrap">100 (85 %)</td><td>18 (14 dropped, 4 timeout)</td><td>103 / 124 / 238</td><td>1.13 / 1.41</td></tr>
+            <tr><td>fixed start</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>122 / 122 / 122</td><td>0 / 0</td></tr>
+            <tr><td>fixed + pushes</td><td>111</td><td style="white-space:nowrap">100 (90 %)</td><td>11 (10 dropped, 1 timeout)</td><td>110 / 129 / 400</td><td>1.19 / 1.79</td></tr>
+            <tr><th scope="row" rowspan="3">beam assembly, step 1</th><td>small range</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>105 / 114 / 148</td><td>0.56 / 1.05</td></tr>
+            <tr><td>fixed start</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>111 / 111 / 111</td><td>0 / 0</td></tr>
+            <tr><td>fixed + pushes</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>106 / 127 / 594</td><td>1.13 / 1.74</td></tr>
+            <tr><th scope="row" rowspan="3">beam assembly, step 2</th><td>small range</td><td>101</td><td style="white-space:nowrap">100 (99 %)</td><td>1 (dropped)</td><td>121 / 128 / 186</td><td>0.75 / 1.81</td></tr>
+            <tr><td>fixed start</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>126 / 126 / 126</td><td>0 / 0</td></tr>
+            <tr><td>fixed + pushes</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>121 / 139 / 959</td><td>1.08 / 2.02</td></tr>
+            <tr><th scope="row" rowspan="3">screwing</th><td>small range</td><td>112</td><td style="white-space:nowrap">100 (89 %)</td><td>12 (11 timeout, 1 stalled)</td><td>437 / 606 / 903</td><td>1.42 / 1.74</td></tr>
+            <tr><td>fixed start</td><td>100</td><td style="white-space:nowrap">100 (100 %)</td><td>0</td><td>534 / 534 / 534</td><td>0 / 0</td></tr>
+            <tr><td>fixed + pushes</td><td>132</td><td style="white-space:nowrap">100 (76 %)</td><td>32 (19 dropped, 13 timeout)</td><td>440 / 638 / 1095</td><td>1.61 / 1.74</td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">Frames at 60 Hz. Episodes are shorter and more uniform than Week 3; the tight-insertion tail = expert misses the hole once and retries.</p>
+        <p class="tnote">Frames at 60 Hz. Spread = max over time of |hand joint angle &minus; the same joint in the set's first episode|, averaged (or maxed) over the other 99 episodes. Pushes spread the trajectories as much as the start range does, and more in episode length (long tails = recoveries and retries). For reference the Week 3 full-range set: 50 per task from 66 / 58 / 78 / 80 seeds, frames up to 653 / 604 / 548 / 1037.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/variants_goal_distance.png" alt="Insertion progress over time for all 100 episodes per task in each of the three sets, over the base episode" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Insertion progress (part-to-goal distance, log) of all 100 episodes per task (colour) over the base episode (black). Columns: small range, fixed start, fixed start + pushes. The fixed-start column is one line drawn 100 times.</figcaption>
+        </figure>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week4/dataset_small/variants_perturbation.png" alt="Histograms of impulse magnitude, impulses per episode and impulse timing in the perturbed set" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>The pushes: 5426 impulses in 400 episodes. Magnitude (median 0.5 N), count per episode (7&ndash;8 on the short tasks, 31 on screwing), and when they land (uniform, none in retract).</figcaption>
+        </figure>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/reset_states.png" alt="Scatter plots of the part start position, hole position and part orientation for the small-range and full-range sets, four tasks" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Initial states. Colour: 100 new episodes; grey: 50 Week 3 episodes; cross: base. Bottom row: tilt from the base, &le;10&deg; now vs 0 to 180&deg; before.</figcaption>
+          <figcaption>Small-range set, initial states. Colour: 100 episodes; grey: 50 Week 3 episodes; cross: base = the start of the two fixed sets. Bottom row: tilt from the base, &le;10&deg; now vs 0 to 180&deg; before.</figcaption>
         </figure>
 
         <figure class="stack" style="margin-top:18px">
           <img src="assets/updates/week4/dataset_small/reset_and_final_frames.jpg" alt="Camera frames at reset and at the last frame for the base episode and five small-range episodes per task" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Per task: base (left, red label) + 5 new episodes; top = reset, bottom = last frame.</figcaption>
-        </figure>
-
-        <figure class="stack" style="margin-top:18px">
-          <img src="assets/updates/week4/dataset_small/trajectory_bundle.png" alt="All 100 small-range trajectories per task overlaid on the base episode: part height, part-to-goal distance, fingertip force and hand command lead over time" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>All 100 trajectories per task (colour) over the base (black). Tight through grasp and lift, spread only at insertion. Bottom row = the command lead the joint head must output.</figcaption>
+          <figcaption>Small-range set, per task: base (left, red label) + 5 episodes; top = reset, bottom = last frame.</figcaption>
         </figure>
 
         <div class="picker" id="w4d-pick" role="group" aria-label="Choose a task">
@@ -555,22 +578,35 @@ html{scroll-behavior:smooth}
         </div>
         <div class="duo">
           <figure>
-            <video class="pk-video-base" controls preload="auto" playsinline loop></video>
+            <p class="lbl">Base episode <span class="sub">Week 3 set</span></p>
+            <video class="pk-video-base" controls preload="metadata" playsinline loop></video>
             <figcaption class="pk-cap-base"></figcaption>
           </figure>
           <figure>
-            <video class="pk-video-small" controls preload="auto" playsinline loop></video>
+            <p class="lbl">Small range <span class="sub">one episode started next to the base</span></p>
+            <video class="pk-video-small" controls preload="metadata" playsinline loop></video>
             <figcaption class="pk-cap-small"></figcaption>
           </figure>
+          <figure>
+            <p class="lbl">Fixed start <span class="sub">the one trajectory of the set</span></p>
+            <video class="pk-video-fixed" controls preload="metadata" playsinline loop></video>
+            <figcaption class="pk-cap-fixed"></figcaption>
+          </figure>
+          <figure>
+            <p class="lbl">Fixed start + pushes <span class="sub">impulses drawn on the part</span></p>
+            <video class="pk-video-pert" controls preload="metadata" playsinline loop></video>
+            <figcaption class="pk-cap-pert"></figcaption>
+          </figure>
         </div>
-        <p class="tnote">Left: base episode (Week 3 set). Right: one new episode started next to it. Goal marker hidden, as in the training images.</p>
+        <p class="tnote">Goal marker hidden, as in the training images. In the pushes video a red arrow on the part is the force of the latest impulse (held 0.3 s, then fading), a blue ring a torque, and the strip at the bottom is the whole impulse sequence; every episode of that set has this video (<code>rollout_perturbation.mp4</code>).</p>
 
         <div class="callout">
-          <p><b>Use</b></p>
+          <p><b>What each set tests</b></p>
           <ul style="margin:0">
-            <li>Train on this set alone; evaluate rungs 3 and 4 on its own episodes.</li>
-            <li>Fails on 100 near-identical episodes &rarr; modelling problem. Passes &rarr; Week 3 set, then fresh seeds.</li>
-            <li>Base seeds and ranges are stored in every episode; the set can be regenerated or widened step by step.</li>
+            <li><b>Fixed start</b>: pure memorisation. A policy that cannot drive itself through the one trajectory it was trained on has a modelling problem, not a data problem.</li>
+            <li><b>Fixed start + pushes</b>: same start, but the demonstrations contain the expert's recoveries, so the policy sees off-path states with the right correction.</li>
+            <li><b>Small range</b>: the smallest generalisation step, &plusmn;1 cm and &plusmn;10&deg;.</li>
+            <li>Base seeds, ranges and push parameters are stored in every episode; any set can be regenerated or widened step by step.</li>
           </ul>
         </div>
       </section>
@@ -657,30 +693,56 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 6: per-task v2 checkpoints, in-domain ─────────────── -->
+      <!-- ─────────────── 6: per-task state-forecast checkpoints on the three small training sets ─────────────── -->
       <section class="result" id="w4-r6">
-        <h3><span class="rn">6</span>Per-task checkpoints on their own training starts</h3>
-        <p class="lead">One policy per task instead of one for all four, trained on the small-range set of 4. Every rollout starts from the
-        recorded initial state of one of that policy's <b>training</b> episodes; policy forecasts + the force controller, as in 1.</p>
+        <h3><span class="rn">6</span>Per-task state-forecast checkpoints on the three small training sets</h3>
+        <p class="lead">One policy per task, point cloud and RGB-D, trained on each of the small sets of 4: <b>small-range</b>, <b>fixed start</b> and
+        <b>fixed start + pushes</b>. Every rollout starts from the recorded initial state of one of that policy's <b>training</b> episodes; policy forecasts (measured states) + the force controller, as in 1.</p>
 
         <details class="settings">
           <summary>Settings</summary>
           <ul>
-            <li><b>Checkpoints</b>: 8 = 4 tasks &times; {point cloud, RGB-D}. EgoVerse HPT (16-block trunk, flow-matching head), 21k steps on that task's 90 training episodes; inputs and outputs as before (joint positions, EMA velocity, EMA force, contacts, 33 ms history; 16 future measured states, forces and contacts as changes from the current state). Offline on validation episodes they are slightly better than one policy for all tasks (hand 0.041&ndash;0.057 vs 0.045&ndash;0.057 rad).</li>
-            <li><b>Episodes</b>: 5 training episodes per task (seeds 5000&ndash;5117, evenly spaced through the train split), the recorded initial state restored exactly. 4 tasks &times; 5 &times; 2 visual inputs &times; 2 force laws &times; 2 input sources = <b>160 rollouts</b>.</li>
+            <li><b>Training sets</b> (all from <a href="#w4-r4">4</a>, 100 successful episodes per task, 90 for training): <b>small-range</b> (start within &plusmn;1 cm / &plusmn;10&deg; of one base episode), <b>fixed start</b> (every episode starts from that base state exactly) and <b>fixed start + pushes</b> (same start; random push impulses on the part during collection, N(0,1) &times; mass &times; 10 m/s<sup>2</sup> with probability 0.05 per step). The two fixed sets share the identical start (0.0 difference).</li>
+            <li><b>Checkpoints</b>: 24 = 3 sets &times; 4 tasks &times; {point cloud, RGB-D}. EgoVerse HPT (16-block trunk, flow-matching head), 21k steps on that task's 90 training episodes; inputs and outputs as before (joint positions, EMA velocity, EMA force, contacts, 33 ms history; 16 future measured states, forces and contacts as changes from the current state). Offline on validation episodes they are slightly better than one policy for all tasks (hand 0.041&ndash;0.057 vs 0.045&ndash;0.057 rad).</li>
+            <li><b>Episodes</b>: 5 training episodes per task and set, evenly spaced through the train split, the recorded initial state restored exactly (small-range seeds 5000&ndash;5117; in the fixed sets the 5 starts are identical and only the sampling-noise seed differs). 3 sets &times; 4 tasks &times; 5 &times; 2 visual inputs &times; 2 force laws &times; 2 input sources = <b>480 rollouts</b>, plus 20 exact replays of the recorded commands for the small-range and fixed sets (20/20 each; not run for the pushes set, whose recordings depend on the random pushes).</li>
             <li><b>Input sources</b>: <i>live</i> = the real closed loop; <i>recorded observations</i> = the policy is fed the recording's inputs at every state (teacher forcing), its forecasts executed live.</li>
             <li><b>Sampling</b>: each forecast = mean of 128 samples &times; 5 Euler steps (~55 ms); noise seeded per episode.</li>
-            <li><b>Loop</b>: forecast every 2 states, linear interpolation, velocity feedforward, task-space force law (kp 0.3, ki 10, clip 0.12 rad) or the null law (position only); position-PD actuation. Visuals delayed 2 states to match the training recordings.</li>
+            <li><b>Loop</b>: forecast every 2 states, linear interpolation, velocity feedforward, task-space force law (kp 0.3, ki 10, clip 0.12 rad) or the null law (position only); position-PD actuation. Visuals fed with each set's own capture lag: 2 states for small-range, 0 for the fixed sets (verified by replay: depth identical to the stored frames).</li>
             <li><b>End</b>: success = all sub-goals + retract (env verdict); otherwise 10 s without progress, or the recording ends and the last reference is held 2 s (teacher forced).</li>
+            <li><b>No pushes during evaluation</b>: the perturbed set's policies run unperturbed. Their recordings contain pushes, so the part leaves its recorded path after 6&ndash;11 frames even when the policy is fed the recording.</li>
           </ul>
         </details>
 
+        <h4>Outcome, 520 rollouts</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>training set &middot; input &middot; law</th><th>recorded obs</th><th>live</th><th>closest approach, mm <span class="sub">recorded obs / live</span></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">small-range &middot; expert commands, exact replay</th><td colspan="2"><b>20/20</b></td><td>3</td></tr>
+            <tr><th scope="row">small-range &middot; point cloud &middot; force law</th><td>0/20</td><td>0/20</td><td>126 / 282</td></tr>
+            <tr class="dim"><th scope="row">small-range &middot; point cloud &middot; null law</th><td>0/20</td><td>0/20</td><td>191 / 281</td></tr>
+            <tr><th scope="row">small-range &middot; RGB-D &middot; force law</th><td><b>1/20</b></td><td>0/20</td><td>112 / 277</td></tr>
+            <tr class="dim"><th scope="row">small-range &middot; RGB-D &middot; null law</th><td>0/20</td><td>0/20</td><td>175 / 282</td></tr>
+            <tr><th scope="row">fixed &middot; expert commands, exact replay</th><td colspan="2"><b>20/20</b></td><td>2</td></tr>
+            <tr><th scope="row">fixed &middot; point cloud &middot; force law</th><td><b>1/20</b></td><td>0/20</td><td>152 / 281</td></tr>
+            <tr class="dim"><th scope="row">fixed &middot; point cloud &middot; null law</th><td>0/20</td><td>0/20</td><td>154 / 281</td></tr>
+            <tr><th scope="row">fixed &middot; RGB-D &middot; force law</th><td>0/20</td><td>0/20</td><td>153 / 274</td></tr>
+            <tr class="dim"><th scope="row">fixed &middot; RGB-D &middot; null law</th><td>0/20</td><td>0/20</td><td>140 / 280</td></tr>
+            <tr><th scope="row">fixed + pushes &middot; point cloud &middot; force law</th><td>0/20</td><td>0/20</td><td>196 / 281</td></tr>
+            <tr class="dim"><th scope="row">fixed + pushes &middot; point cloud &middot; null law</th><td>0/20</td><td>0/20</td><td>216 / 281</td></tr>
+            <tr><th scope="row">fixed + pushes &middot; RGB-D &middot; force law</th><td>0/20</td><td>0/20</td><td>193 / 281</td></tr>
+            <tr class="dim"><th scope="row">fixed + pushes &middot; RGB-D &middot; null law</th><td>0/20</td><td>0/20</td><td>224 / 281</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">20 = 4 tasks &times; 5 training episodes. Closest approach = the env's keypoint distance of the part to its goal, minimum over the rollout, mean over the 20 episodes (281 mm = the starting distance averaged over tasks). The two successes, both teacher forced on beam step 1: small-range RGB-D seed 5024 (2.5 s; the recording took 2.2 s) and fixed-set point cloud (2.1 s; recording 1.9 s).</p>
+
+        <h4>Rollouts</h4>
+        <div class="pkgroup">
         <div class="picker" id="w4r6-pick" role="group" aria-label="Choose a task and a training episode">
           <label>Task <select class="pk-task"></select></label>
           <label>Episode <select class="pk-seed"></select></label>
           <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
         </div>
-        <p class="tnote" style="margin-top:-6px">All five clips are the <b>same training episode</b> (same seed, same restored start); only the reference source differs. Task-space force law.</p>
+        <p class="tnote" style="margin-top:-6px">Small-range set. All five clips are the <b>same training episode</b> (same seed, same restored start); only the reference source differs. Task-space force law.</p>
         <div class="stack">
           <figure>
             <p class="lbl"><span class="k">1</span>Expert commands, exact replay <span class="sub">infrastructure check</span></p>
@@ -704,71 +766,15 @@ html{scroll-behavior:smooth}
           </figure>
         </div>
 
-        <h4>Outcome, 160 rollouts</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest keypoint, mm</th><th>force bias, N</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">3 &middot; point-cloud policy, recorded obs + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>126</td><td>&minus;2.7</td></tr>
-            <tr class="dim"><th scope="row">3 &middot; point-cloud policy, recorded obs, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>191</td><td>&minus;4.2</td></tr>
-            <tr><th scope="row">3 &middot; RGB-D policy, recorded obs + force law</th><td>0/5</td><td><b>1/5</b></td><td>0/5</td><td>0/5</td><td><b>1/20</b></td><td>112</td><td>&minus;2.8</td></tr>
-            <tr class="dim"><th scope="row">3 &middot; RGB-D policy, recorded obs, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>175</td><td>&minus;3.4</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; point-cloud policy, live + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>282</td><td>&minus;1.6</td></tr>
-            <tr class="dim"><th scope="row">4 &middot; point-cloud policy, live, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>281</td><td>&minus;1.5</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; RGB-D policy, live + force law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>277</td><td>&minus;1.8</td></tr>
-            <tr class="dim"><th scope="row">4 &middot; RGB-D policy, live, null law</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>282</td><td>&minus;1.6</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Successes per task over 5 training episodes. Closest keypoint and force bias (worst fingertip, measured minus target while engaged): means over the 20 episodes of a row. Rung 1 (expert commands, exact replay) on the same 20 starts: 20/20. The one success: beam step 1, seed 5024, both sub-goals + retract in 2.5 s (the recording took 2.2 s); the part stayed within 33 mm of its recorded path.</p>
-
-        <h4>Departure from the recording</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>hand &gt; 0.2 rad off at frame</th><th>part &gt; 10 mm off at frame</th><th>hand forecast error at 33 / 267 ms, rad</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">3 &middot; policy, recorded obs</th><td>0.02 to 0.08</td><td>0.28 to 0.43</td><td>31 to 48</td><td>24 to 38</td><td>0.015 / 0.09 to 0.10 <span class="sub">no motion 0.12 to 0.22</span></td></tr>
-            <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.11 to 1.8</td><td>1.6 to 2.0</td><td>4 to 16</td><td>24 to 36</td><td>0.27 to 0.41 / 0.29 to 0.41 <span class="sub">worse than no motion</span></td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Ranges across the four tasks, point cloud and RGB-D, task-space law; frames at 60 Hz; medians over episodes for the frame columns. Forecast error = mean |predicted &minus; recorded| of the hand joints.</p>
-
-        <figure class="stack" style="margin-top:18px">
-          <img src="assets/updates/week5/v2pt/departure_v2pt.png" alt="Part distance from its recorded path over time, four tasks, for the teacher-forced and live point-cloud and RGB-D per-task policies" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Part distance from the recorded path, median over the 5 training episodes (band: min&ndash;max), task-space law. Teacher forced (blue) keeps the part near the path on beam step 1 and until the grasp elsewhere; live (orange) pushes it away within 0.5&ndash;1 s.</figcaption>
-        </figure>
-
-        <div class="callout">
-          <p><b>What the per-task policies change</b></p>
-          <ul style="margin:0">
-            <li><b>Nothing live</b>: 0/80. The hand is &gt; 0.2 rad off the recording within 4&ndash;16 frames, the part never gets closer to its goal than at reset (4 mm on average, 47 mm at best), and the part is knocked off its path at 0.4&ndash;0.6 s.</li>
-            <li><b>Teacher forced, marginally</b>: first success of any learned policy in the ladder (RGB-D, beam step 1, 1/5). Beam step 1 is the task where the part stays near its path (36 mm worst); on the others the part is still lost at the grasp.</li>
-            <li><b>Same failure modes as one policy for all tasks</b>: forecast accuracy teacher forced is unchanged (hand 0.015 rad at 33 ms), so splitting by task removes no bottleneck. Measured-state references still carry no squeeze, and the velocity/history inputs still dominate the live forecast.</li>
-            <li><b>Next</b>: predict the expert's commands (<code>joint_target</code>), deploy them with hold interpolation, no velocity lead and a much weaker force law; drop or corrupt the velocity and history inputs.</li>
-          </ul>
         </div>
-      </section>
 
-      <!-- ─────────────── 7: fixed-start training sets ─────────────── -->
-      <section class="result" id="w4-r7">
-        <h3><span class="rn">7</span>Per-task checkpoints trained on fixed-start sets</h3>
-        <p class="lead">Two new training sets remove start variation: every episode of a task starts from the <b>same</b> state (the small-range set's base episode).
-        In the second set the part also received random push impulses during collection, so the demonstrations include recoveries. Policies as in 6 (state forecast + force controller), one per task, point cloud and RGB-D.</p>
-
-        <details class="settings">
-          <summary>Settings</summary>
-          <ul>
-            <li><b>Training sets</b>: <code>bc_dataset_fixed</code> and <code>bc_dataset_fixed_perturbed</code>, 100 successful episodes per task, 90 for training. Both start from the identical state (verified: 0.0 difference). Perturbed: play2perfect's wrench randomisation on the part, N(0,1) &times; mass &times; 10 m/s<sup>2</sup> with probability 0.05 per step.</li>
-            <li><b>Checkpoints</b>: 16 = 2 sets &times; 4 tasks &times; {point cloud, RGB-D}, the same model and training as 6.</li>
-            <li><b>Episodes</b>: 5 training episodes per task per set (same start; only the sampling-noise seed differs). 2 sets &times; 4 tasks &times; 5 &times; 2 inputs &times; 2 laws &times; 2 input sources = <b>320 rollouts</b>, plus 20 exact replays of the fixed set's recorded commands (20/20).</li>
-            <li><b>Visual timing</b>: these sets record the camera at the current state (lag 0; the earlier sets lag 2 states). Verified by replay: depth identical to the stored frames.</li>
-            <li><b>No pushes during evaluation</b>: rollouts of the perturbed-set policies are unperturbed. Their recordings contain pushes, so the part leaves its recorded path after 6&ndash;11 frames even when the policy is fed the recording.</li>
-          </ul>
-        </details>
-
+        <div class="pkgroup" style="margin-top:22px">
         <div class="picker" id="w4r7-pick" role="group" aria-label="Choose a task and an episode">
           <label>Task <select class="pk-task"></select></label>
           <label>Episode <select class="pk-seed"></select></label>
           <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
         </div>
-        <p class="tnote" style="margin-top:-6px">One start per task for both sets; episode <i>k</i> = the <i>k</i>-th evaluated training episode of each set (same start, different sampling noise). Live, task-space force law.</p>
+        <p class="tnote" style="margin-top:-6px">Fixed-start sets: one start per task, shared by both sets; episode <i>k</i> = the <i>k</i>-th evaluated training episode of each set (same start, different sampling noise). Live, task-space force law.</p>
         <div class="stack">
           <figure>
             <p class="lbl"><span class="k">1</span>Expert commands, exact replay <span class="sub">fixed set</span></p>
@@ -792,29 +798,30 @@ html{scroll-behavior:smooth}
           </figure>
         </div>
 
-        <h4>Outcome, 340 rollouts</h4>
+        </div>
+
+        <h4>Departure from the recording, small-range set</h4>
         <div class="tblwrap"><table class="res">
-          <thead><tr><th>training set &middot; input &middot; law</th><th>recorded obs</th><th>live</th><th>closest approach, mm <span class="sub">recorded obs / live</span></th></tr></thead>
+          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>hand &gt; 0.2 rad off at frame</th><th>part &gt; 10 mm off at frame</th><th>hand forecast error at 33 / 267 ms, rad</th></tr></thead>
           <tbody>
-            <tr><th scope="row">fixed &middot; expert commands, exact replay</th><td colspan="2"><b>20/20</b></td><td>2</td></tr>
-            <tr><th scope="row">fixed &middot; point cloud &middot; force law</th><td><b>1/20</b></td><td>0/20</td><td>152 / 281</td></tr>
-            <tr class="dim"><th scope="row">fixed &middot; point cloud &middot; null law</th><td>0/20</td><td>0/20</td><td>154 / 281</td></tr>
-            <tr><th scope="row">fixed &middot; RGB-D &middot; force law</th><td>0/20</td><td>0/20</td><td>153 / 274</td></tr>
-            <tr class="dim"><th scope="row">fixed &middot; RGB-D &middot; null law</th><td>0/20</td><td>0/20</td><td>140 / 280</td></tr>
-            <tr><th scope="row">fixed + pushes &middot; point cloud &middot; force law</th><td>0/20</td><td>0/20</td><td>196 / 281</td></tr>
-            <tr class="dim"><th scope="row">fixed + pushes &middot; point cloud &middot; null law</th><td>0/20</td><td>0/20</td><td>216 / 281</td></tr>
-            <tr><th scope="row">fixed + pushes &middot; RGB-D &middot; force law</th><td>0/20</td><td>0/20</td><td>193 / 281</td></tr>
-            <tr class="dim"><th scope="row">fixed + pushes &middot; RGB-D &middot; null law</th><td>0/20</td><td>0/20</td><td>224 / 281</td></tr>
+            <tr><th scope="row">3 &middot; policy, recorded obs</th><td>0.02 to 0.08</td><td>0.28 to 0.43</td><td>31 to 48</td><td>24 to 38</td><td>0.015 / 0.09 to 0.10 <span class="sub">no motion 0.12 to 0.22</span></td></tr>
+            <tr class="hi"><th scope="row">4 &middot; policy, live</th><td>0.11 to 1.8</td><td>1.6 to 2.0</td><td>4 to 16</td><td>24 to 36</td><td>0.27 to 0.41 / 0.29 to 0.41 <span class="sub">worse than no motion</span></td></tr>
           </tbody>
         </table></div>
-        <p class="tnote">20 = 4 tasks &times; 5 episodes. The one success: fixed set, point cloud, force law, teacher forced, beam step 1 (both sub-goals + retract in 2.1 s; the recording took 1.9 s). Live, the part barely moves toward its goal: closest approach 274&ndash;281 mm against 281 mm at the start (averaged over tasks); only a few RGB-D runs get it somewhat closer.</p>
+        <p class="tnote">Ranges across the four tasks, point cloud and RGB-D, task-space law; frames at 60 Hz; medians over episodes for the frame columns. Forecast error = mean |predicted &minus; recorded| of the hand joints.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week5/v2pt/departure_v2pt.png" alt="Part distance from its recorded path over time, four tasks, for the teacher-forced and live point-cloud and RGB-D per-task policies" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Part distance from the recorded path, median over the 5 training episodes (band: min&ndash;max), task-space law. Teacher forced (blue) keeps the part near the path on beam step 1 and until the grasp elsewhere; live (orange) pushes it away within 0.5&ndash;1 s.</figcaption>
+        </figure>
 
         <div class="callout">
-          <p><b>What removing start variation changes</b></p>
+          <p><b>What the three training sets change</b></p>
           <ul style="margin:0">
-            <li><b>Nothing live</b>: 0/160. Hand &gt; 0.2 rad off at frame 6&ndash;17, as with the small-range set. Identical starts do not fix a state-forecast reference executed through the force controller.</li>
-            <li><b>Better fit offline, not in the loop</b>: offline these policies beat the small-range ones on their own validation episodes (hand 0.030&ndash;0.045 vs 0.042&ndash;0.052 rad). Teacher forced they still lose the part at the grasp (1/80 and 0/80).</li>
-            <li><b>Pushes do not help here</b>: the perturbed set's policies are no better teacher forced or live. Its evaluation is unperturbed, so recovery behaviour is never exercised.</li>
+            <li><b>Nothing live</b>: 0/240. On every set the hand is &gt; 0.2 rad off the recording within 4&ndash;17 frames, and the part is never carried toward its goal (closest approach 274&ndash;282 mm against 281 at the start). Identical starts do not fix a state-forecast reference executed through the force controller.</li>
+            <li><b>Teacher forced, 2/240</b>, both on beam step 1, the one task where the part stays near its path. Elsewhere the part is lost at the grasp: measured-state references carry no squeeze.</li>
+            <li><b>Better fit offline, not in the loop</b>: the fixed-set policies beat the small-range ones on their own validation episodes (hand 0.030&ndash;0.045 vs 0.042&ndash;0.052 rad); per-task beat multi-task slightly. Neither shows up closed loop.</li>
+            <li><b>Pushes do not help here</b>: the perturbed set's policies are no better; their evaluation is unperturbed, so recovery is never exercised.</li>
             <li>Taken with 5: the <b>target</b> (commands vs measured states, executed by the expert's own path) matters more than the training set.</li>
           </ul>
         </div>
@@ -1012,12 +1019,19 @@ html{scroll-behavior:smooth}
                      {id:"beam_assembly_step1", label:"Beam assembly, step 1", base:1036, small:5000},
                      {id:"beam_assembly_step2", label:"Beam assembly, step 2", base:1018, small:5000},
                      {id:"screwing", label:"Screwing", base:1050, small:5000}];
+          const vf = r.querySelector(".pk-video-fixed"), vp = r.querySelector(".pk-video-pert");
+          const cf = r.querySelector(".pk-cap-fixed"), cp = r.querySelector(".pk-cap-pert");
           picker("w4d-pick", T, t => {
-            [vb, vs].forEach(v => v.pause());
-            vb.src = "assets/updates/week4/dataset_small/" + t.id + "_base_seed" + t.base + ".mp4"; vb.load();
-            vs.src = "assets/updates/week4/dataset_small/" + t.id + "_small_seed" + t.small + ".mp4"; vs.load();
+            [vb, vs, vf, vp].forEach(v => v.pause());
+            const d = "assets/updates/week4/dataset_small/";
+            vb.src = d + t.id + "_base_seed" + t.base + ".mp4"; vb.load();
+            vs.src = d + t.id + "_small_seed" + t.small + ".mp4"; vs.load();
+            vf.src = d + t.id + "_fixed_seed6000.mp4"; vf.load();
+            vp.src = d + t.id + "_perturbed_seed7000.mp4"; vp.load();
             cb.textContent = t.label + "  \u00b7  base episode, seed " + t.base + " (Week 3 set)";
-            cs.textContent = t.label + "  \u00b7  small-range episode, seed " + t.small;
+            cs.textContent = t.label + "  \u00b7  small-range set, seed " + t.small;
+            cf.textContent = t.label + "  \u00b7  fixed-start set, seed 6000 (identical for every seed)";
+            cp.textContent = t.label + "  \u00b7  fixed start + pushes, seed 7000";
           });
         })();
         /* week 4, 3: position offset above feedforward torque, one episode per task */
@@ -1102,7 +1116,7 @@ html{scroll-behavior:smooth}
           root.querySelector(".pk-next").addEventListener("click", () => step(1));
           fillSeeds(); show();
         })();
-        /* weeks 4-5, 7: fixed-start sets; episode k of each set (same start) */
+        /* weeks 4-5, 6 (second picker): fixed-start sets; episode k of each set (same start) */
         (function(){
           const root = document.getElementById("w4r7-pick"), r = root.parentElement;
           const selT = root.querySelector(".pk-task"), selS = root.querySelector(".pk-seed");
@@ -1206,8 +1220,7 @@ html{scroll-behavior:smooth}
       ["w4-r3", "3 · Actuation channel"],
       ["w4-r4", "4 · Small-range set"],
       ["w4-r5", "5 · Action policies"],
-      ["w4-r6", "6 · Per-task checkpoints"],
-      ["w4-r7", "7 · Fixed-start sets"],
+      ["w4-r6", "6 · Small-set checkpoints"],
     ["week-3", "Week 3", 1],
       ["w3-r1", "1 · Offline prediction"],
       ["w3-r2", "2 · Closed loop"],
