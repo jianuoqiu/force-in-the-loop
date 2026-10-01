@@ -294,8 +294,8 @@ html{scroll-behavior:smooth}
         <li><b>2</b> Why the live rollout drifts: the forecast is mostly a copy of the velocity input.</li>
         <li><b>3</b> Actuation channel, position offset vs feedforward torque: not the bottleneck.</li>
         <li><b>4</b> A small-range dataset, 100 episodes per task next to one base episode, for overfitting first.</li>
-        <li><b>5</b> Per-task checkpoints (one policy per task, point cloud and RGB-D) on their own training starts: 0/80 live, 1/80 teacher forced.</li>
-        <li><b>6</b> Per-task action policies (expert RL actions, no force controller): 0/20 live, but the first policy that carries the part toward the goal (7/20 within 30 mm).</li>
+        <li><b>5</b> Per-task action policies (expert RL actions, no force controller): 0/20 live, but the first policy that carries the part toward the goal (7/20 within 30 mm).</li>
+        <li><b>6</b> Per-task checkpoints (one policy per task, point cloud and RGB-D) on their own training starts: 0/80 live, 1/80 teacher forced.</li>
         <li><b>7</b> Per-task checkpoints trained on fixed-start sets (with and without push perturbations): 0/160 live, 1/160 teacher forced.</li>
       </ul>
 
@@ -575,9 +575,91 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 5: per-task v2 checkpoints, in-domain ─────────────── -->
+      <!-- ─────────────── 5: per-task ACTION policies ─────────────── -->
       <section class="result" id="w4-r5">
-        <h3><span class="rn">5</span>Per-task checkpoints on their own training starts</h3>
+        <h3><span class="rn">5</span>Per-task action policies: the expert's RL actions, no force controller</h3>
+        <p class="lead">Same model, inputs and training starts as the point-cloud policies of 6, but the target is the expert's next 16 <b>RL actions</b>
+        (the commands, not measured states). They are executed exactly as the expert's were: through play2perfect's own action pipeline, with no middle layer and no force law.</p>
+
+        <details class="settings">
+          <summary>Settings</summary>
+          <ul>
+            <li><b>Checkpoints</b>: 4 per-task EgoVerse HPT flow-matching policies, point cloud + the usual state inputs, trained 21.2k steps on that task's 90 <code>bc_dataset_small</code> training episodes. Output: a[s&hellip;s+15], 29-dim in [&minus;1, 1] (7 arm + 22 hand).</li>
+            <li><b>Execution</b>: forecast every 2 states; each frame the chunk's action for that state goes through the env's pipeline: arm target += 1.5 rad/s &times; dt &times; a, then EMA 0.1; hand = EMA 0.1 of the action mapped onto the joint range. Both physics substeps hold that target. Mean of 128 samples &times; 5 Euler steps per forecast.</li>
+            <li><b>Loading</b>: the raw EgoVerse checkpoints were converted to the <code>bc_sim_v2</code> format (same network, strict weight load). Offline on validation episodes the converted policy matches the EgoVerse predictions to 0.013&ndash;0.016 action units (sampling noise) and is as accurate against the true actions.</li>
+            <li><b>Rung 1 here</b>: the recorded actions through the same path reproduce every recording exactly (0.000 rad, 0.0 mm): 20/20.</li>
+            <li><b>Episodes</b>: the same 20 training starts as 6 (seeds 5000&ndash;5117), so the columns compare directly with the state-forecast policy.</li>
+          </ul>
+        </details>
+
+        <div class="picker" id="w4r5-pick" role="group" aria-label="Choose a task and a training episode">
+          <label>Task <select class="pk-task"></select></label>
+          <label>Episode <select class="pk-seed"></select></label>
+          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
+        </div>
+        <p class="tnote" style="margin-top:-6px">Same training episode in every clip. The last clip is the state-forecast point-cloud policy of 6 (+ force law) from the same start.</p>
+        <div class="stack">
+          <figure>
+            <p class="lbl"><span class="k">1</span>Expert actions, exact replay <span class="sub">infrastructure check</span></p>
+            <video class="pk-video-1" controls preload="metadata" playsinline></video><figcaption class="pk-cap-1"></figcaption>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k">3</span>Action policy on recorded observations <span class="sub">teacher forced</span></p>
+            <video class="pk-video-2" controls preload="metadata" playsinline></video><figcaption class="pk-cap-2"></figcaption>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">4</span>Action policy live <span class="sub">closed loop</span></p>
+            <video class="pk-video-3" controls preload="metadata" playsinline></video><figcaption class="pk-cap-3"></figcaption>
+          </figure>
+          <figure>
+            <p class="lbl"><span class="k b">4</span>State-forecast policy + force controller, live <span class="sub">section 6, for comparison</span></p>
+            <video class="pk-video-4" controls preload="metadata" playsinline></video><figcaption class="pk-cap-4"></figcaption>
+          </figure>
+        </div>
+
+        <h4>Outcome, 60 rollouts (+ the matching rows of 6)</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest approach to goal, mm</th><th>runs within 30 mm</th><th>part dropped</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; expert actions, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>20/20</td><td>0</td></tr>
+            <tr><th scope="row">3 &middot; action policy, recorded obs</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>56</td><td>6/20</td><td>2</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; action policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td><b>69</b></td><td><b>7/20</b></td><td>6</td></tr>
+            <tr class="dim"><th scope="row">3 &middot; state policy + force law, recorded obs <span class="sub">from 6</span></th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>126</td><td>5/20</td><td>1</td></tr>
+            <tr class="dim"><th scope="row">4 &middot; state policy + force law, live <span class="sub">from 6</span></th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>282</td><td>0/20</td><td>0</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Closest approach = the env's keypoint distance of the part to its goal, minimum over the rollout, mean over the 20 episodes (it starts at 220&ndash;400 mm). One teacher-forced run reached a sub-goal (beam step 1, seed 5001: 1 of 2).</p>
+
+        <h4>Departure from the recording</h4>
+        <div class="tblwrap"><table class="res">
+          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>hand &gt; 0.2 rad off at frame</th><th>part &gt; 10 mm off at frame</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">3 &middot; action policy, recorded obs</th><td>0.04</td><td>0.39</td><td>74</td><td>70</td></tr>
+            <tr class="hi"><th scope="row">4 &middot; action policy, live</th><td>0.21</td><td>1.24</td><td><b>27</b></td><td>37</td></tr>
+            <tr class="dim"><th scope="row">4 &middot; state policy + force law, live <span class="sub">from 6</span></th><td>0.68</td><td>1.76</td><td>7</td><td>31</td></tr>
+          </tbody>
+        </table></div>
+        <p class="tnote">Means over the 20 episodes (frames: medians), 60 Hz. The action policy stays on the demonstration about four times longer before the hand departs.</p>
+
+        <figure class="stack" style="margin-top:18px">
+          <img src="assets/updates/week5/action/goal_distance.png" alt="Part keypoint distance to goal over time, four tasks: expert replay, action policy teacher forced and live, state-forecast policy live" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
+          <figcaption>Part distance to goal, median over the 5 training starts (band: min&ndash;max). The action policy (blue) follows the expert (grey) down to 30&ndash;100 mm, then loses the part; the state-forecast policy (orange) never moves it toward the goal.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <p><b>What the action target changes</b></p>
+          <ul style="margin:0">
+            <li><b>Still 0/20</b>, but for the first time a live policy <b>grasps, lifts and carries</b> the part toward the goal: closest approach 28&ndash;113 mm per task (mean), 7/20 runs within 30 mm (none on tight insertion), 6 drop the part on the way (3 of them screwing).</li>
+            <li><b>Longer on the demonstration</b>: hand &gt; 0.2 rad off at frame 27 instead of 7. Commands already contain the squeeze and are executed with the expert's own smoothing, so no reference-type or force-law mismatch remains.</li>
+            <li><b>Remaining failure = the final approach</b>: the part reaches 30&ndash;100 mm of the goal and then slips or misses the hole. Teacher forcing does not fix it (0/20, 1 sub-goal), so the per-step action fit, not only compounding drift, is limiting.</li>
+            <li><b>Next</b>: evaluate the multi-task action checkpoint on the same starts; more samples or chunk ensembling (the expert's actions sit at &plusmn;1 most of the time, 78&nbsp;% on tight insertion, and averaging 128 samples pulls them inward); an RGB-D action policy.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ─────────────── 6: per-task v2 checkpoints, in-domain ─────────────── -->
+      <section class="result" id="w4-r6">
+        <h3><span class="rn">6</span>Per-task checkpoints on their own training starts</h3>
         <p class="lead">One policy per task instead of one for all four, trained on the small-range set of 4. Every rollout starts from the
         recorded initial state of one of that policy's <b>training</b> episodes; policy forecasts + the force controller, as in 1.</p>
 
@@ -593,7 +675,7 @@ html{scroll-behavior:smooth}
           </ul>
         </details>
 
-        <div class="picker" id="w4r5-pick" role="group" aria-label="Choose a task and a training episode">
+        <div class="picker" id="w4r6-pick" role="group" aria-label="Choose a task and a training episode">
           <label>Task <select class="pk-task"></select></label>
           <label>Episode <select class="pk-seed"></select></label>
           <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
@@ -664,99 +746,17 @@ html{scroll-behavior:smooth}
         </div>
       </section>
 
-      <!-- ─────────────── 6: per-task ACTION policies ─────────────── -->
-      <section class="result" id="w4-r6">
-        <h3><span class="rn">6</span>Per-task action policies: the expert's RL actions, no force controller</h3>
-        <p class="lead">Same model, inputs and training starts as the point-cloud policies of 5, but the target is the expert's next 16 <b>RL actions</b>
-        (the commands, not measured states). They are executed exactly as the expert's were: through play2perfect's own action pipeline, with no middle layer and no force law.</p>
-
-        <details class="settings">
-          <summary>Settings</summary>
-          <ul>
-            <li><b>Checkpoints</b>: 4 per-task EgoVerse HPT flow-matching policies, point cloud + the usual state inputs, trained 21.2k steps on that task's 90 <code>bc_dataset_small</code> training episodes. Output: a[s&hellip;s+15], 29-dim in [&minus;1, 1] (7 arm + 22 hand).</li>
-            <li><b>Execution</b>: forecast every 2 states; each frame the chunk's action for that state goes through the env's pipeline: arm target += 1.5 rad/s &times; dt &times; a, then EMA 0.1; hand = EMA 0.1 of the action mapped onto the joint range. Both physics substeps hold that target. Mean of 128 samples &times; 5 Euler steps per forecast.</li>
-            <li><b>Loading</b>: the raw EgoVerse checkpoints were converted to the <code>bc_sim_v2</code> format (same network, strict weight load). Offline on validation episodes the converted policy matches the EgoVerse predictions to 0.013&ndash;0.016 action units (sampling noise) and is as accurate against the true actions.</li>
-            <li><b>Rung 1 here</b>: the recorded actions through the same path reproduce every recording exactly (0.000 rad, 0.0 mm): 20/20.</li>
-            <li><b>Episodes</b>: the same 20 training starts as 5 (seeds 5000&ndash;5117), so the columns compare directly with the state-forecast policy.</li>
-          </ul>
-        </details>
-
-        <div class="picker" id="w4r6-pick" role="group" aria-label="Choose a task and a training episode">
-          <label>Task <select class="pk-task"></select></label>
-          <label>Episode <select class="pk-seed"></select></label>
-          <span class="pick-nav"><button type="button" class="pk-prev" aria-label="Previous episode">&larr;</button><button type="button" class="pk-next" aria-label="Next episode">&rarr;</button></span>
-        </div>
-        <p class="tnote" style="margin-top:-6px">Same training episode in every clip. The last clip is the state-forecast point-cloud policy of 5 (+ force law) from the same start.</p>
-        <div class="stack">
-          <figure>
-            <p class="lbl"><span class="k">1</span>Expert actions, exact replay <span class="sub">infrastructure check</span></p>
-            <video class="pk-video-1" controls preload="metadata" playsinline></video><figcaption class="pk-cap-1"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k">3</span>Action policy on recorded observations <span class="sub">teacher forced</span></p>
-            <video class="pk-video-2" controls preload="metadata" playsinline></video><figcaption class="pk-cap-2"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k b">4</span>Action policy live <span class="sub">closed loop</span></p>
-            <video class="pk-video-3" controls preload="metadata" playsinline></video><figcaption class="pk-cap-3"></figcaption>
-          </figure>
-          <figure>
-            <p class="lbl"><span class="k b">4</span>State-forecast policy + force controller, live <span class="sub">section 5, for comparison</span></p>
-            <video class="pk-video-4" controls preload="metadata" playsinline></video><figcaption class="pk-cap-4"></figcaption>
-          </figure>
-        </div>
-
-        <h4>Outcome, 60 rollouts (+ the matching rows of 5)</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>tight insertion</th><th>beam step 1</th><th>beam step 2</th><th>screwing</th><th>all</th><th>closest approach to goal, mm</th><th>runs within 30 mm</th><th>part dropped</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">1 &middot; expert actions, exact replay</th><td>5/5</td><td>5/5</td><td>5/5</td><td>5/5</td><td><b>20/20</b></td><td>3</td><td>20/20</td><td>0</td></tr>
-            <tr><th scope="row">3 &middot; action policy, recorded obs</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>56</td><td>6/20</td><td>2</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; action policy, live</th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td><b>69</b></td><td><b>7/20</b></td><td>6</td></tr>
-            <tr class="dim"><th scope="row">3 &middot; state policy + force law, recorded obs <span class="sub">from 5</span></th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>126</td><td>5/20</td><td>1</td></tr>
-            <tr class="dim"><th scope="row">4 &middot; state policy + force law, live <span class="sub">from 5</span></th><td>0/5</td><td>0/5</td><td>0/5</td><td>0/5</td><td>0/20</td><td>282</td><td>0/20</td><td>0</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Closest approach = the env's keypoint distance of the part to its goal, minimum over the rollout, mean over the 20 episodes (it starts at 220&ndash;400 mm). One teacher-forced run reached a sub-goal (beam step 1, seed 5001: 1 of 2).</p>
-
-        <h4>Departure from the recording</h4>
-        <div class="tblwrap"><table class="res">
-          <thead><tr><th>reference source</th><th>worst arm joint error, rad</th><th>worst hand joint error, rad</th><th>hand &gt; 0.2 rad off at frame</th><th>part &gt; 10 mm off at frame</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">3 &middot; action policy, recorded obs</th><td>0.04</td><td>0.39</td><td>74</td><td>70</td></tr>
-            <tr class="hi"><th scope="row">4 &middot; action policy, live</th><td>0.21</td><td>1.24</td><td><b>27</b></td><td>37</td></tr>
-            <tr class="dim"><th scope="row">4 &middot; state policy + force law, live <span class="sub">from 5</span></th><td>0.68</td><td>1.76</td><td>7</td><td>31</td></tr>
-          </tbody>
-        </table></div>
-        <p class="tnote">Means over the 20 episodes (frames: medians), 60 Hz. The action policy stays on the demonstration about four times longer before the hand departs.</p>
-
-        <figure class="stack" style="margin-top:18px">
-          <img src="assets/updates/week5/action/goal_distance.png" alt="Part keypoint distance to goal over time, four tasks: expert replay, action policy teacher forced and live, state-forecast policy live" style="display:block;width:100%;height:auto;border:1px solid var(--rule2);border-radius:9px;background:#fff">
-          <figcaption>Part distance to goal, median over the 5 training starts (band: min&ndash;max). The action policy (blue) follows the expert (grey) down to 30&ndash;100 mm, then loses the part; the state-forecast policy (orange) never moves it toward the goal.</figcaption>
-        </figure>
-
-        <div class="callout">
-          <p><b>What the action target changes</b></p>
-          <ul style="margin:0">
-            <li><b>Still 0/20</b>, but for the first time a live policy <b>grasps, lifts and carries</b> the part toward the goal: closest approach 28&ndash;113 mm per task (mean), 7/20 runs within 30 mm (none on tight insertion), 6 drop the part on the way (3 of them screwing).</li>
-            <li><b>Longer on the demonstration</b>: hand &gt; 0.2 rad off at frame 27 instead of 7. Commands already contain the squeeze and are executed with the expert's own smoothing, so no reference-type or force-law mismatch remains.</li>
-            <li><b>Remaining failure = the final approach</b>: the part reaches 30&ndash;100 mm of the goal and then slips or misses the hole. Teacher forcing does not fix it (0/20, 1 sub-goal), so the per-step action fit, not only compounding drift, is limiting.</li>
-            <li><b>Next</b>: evaluate the multi-task action checkpoint on the same starts; more samples or chunk ensembling (the expert's actions sit at &plusmn;1 most of the time, 78&nbsp;% on tight insertion, and averaging 128 samples pulls them inward); an RGB-D action policy.</li>
-          </ul>
-        </div>
-      </section>
-
       <!-- ─────────────── 7: fixed-start training sets ─────────────── -->
       <section class="result" id="w4-r7">
         <h3><span class="rn">7</span>Per-task checkpoints trained on fixed-start sets</h3>
         <p class="lead">Two new training sets remove start variation: every episode of a task starts from the <b>same</b> state (the small-range set's base episode).
-        In the second set the part also received random push impulses during collection, so the demonstrations include recoveries. Policies as in 5 (state forecast + force controller), one per task, point cloud and RGB-D.</p>
+        In the second set the part also received random push impulses during collection, so the demonstrations include recoveries. Policies as in 6 (state forecast + force controller), one per task, point cloud and RGB-D.</p>
 
         <details class="settings">
           <summary>Settings</summary>
           <ul>
             <li><b>Training sets</b>: <code>bc_dataset_fixed</code> and <code>bc_dataset_fixed_perturbed</code>, 100 successful episodes per task, 90 for training. Both start from the identical state (verified: 0.0 difference). Perturbed: play2perfect's wrench randomisation on the part, N(0,1) &times; mass &times; 10 m/s<sup>2</sup> with probability 0.05 per step.</li>
-            <li><b>Checkpoints</b>: 16 = 2 sets &times; 4 tasks &times; {point cloud, RGB-D}, the same model and training as 5.</li>
+            <li><b>Checkpoints</b>: 16 = 2 sets &times; 4 tasks &times; {point cloud, RGB-D}, the same model and training as 6.</li>
             <li><b>Episodes</b>: 5 training episodes per task per set (same start; only the sampling-noise seed differs). 2 sets &times; 4 tasks &times; 5 &times; 2 inputs &times; 2 laws &times; 2 input sources = <b>320 rollouts</b>, plus 20 exact replays of the fixed set's recorded commands (20/20).</li>
             <li><b>Visual timing</b>: these sets record the camera at the current state (lag 0; the earlier sets lag 2 states). Verified by replay: depth identical to the stored frames.</li>
             <li><b>No pushes during evaluation</b>: rollouts of the perturbed-set policies are unperturbed. Their recordings contain pushes, so the part leaves its recorded path after 6&ndash;11 frames even when the policy is fed the recording.</li>
@@ -815,7 +815,7 @@ html{scroll-behavior:smooth}
             <li><b>Nothing live</b>: 0/160. Hand &gt; 0.2 rad off at frame 6&ndash;17, as with the small-range set. Identical starts do not fix a state-forecast reference executed through the force controller.</li>
             <li><b>Better fit offline, not in the loop</b>: offline these policies beat the small-range ones on their own validation episodes (hand 0.030&ndash;0.045 vs 0.042&ndash;0.052 rad). Teacher forced they still lose the part at the grasp (1/80 and 0/80).</li>
             <li><b>Pushes do not help here</b>: the perturbed set's policies are no better teacher forced or live. Its evaluation is unperturbed, so recovery behaviour is never exercised.</li>
-            <li>Taken with 6: the <b>target</b> (commands vs measured states, executed by the expert's own path) matters more than the training set.</li>
+            <li>Taken with 5: the <b>target</b> (commands vs measured states, executed by the expert's own path) matters more than the training set.</li>
           </ul>
         </div>
       </section>
@@ -1035,9 +1035,9 @@ html{scroll-behavior:smooth}
               + "  ·  top: force as a position offset, bottom: the same force as joint torque.";
           });
         })();
-        /* weeks 4-5, 5: per-task v2 checkpoints, same training episode across rungs; task + episode pickers */
+        /* weeks 4-5, 6: per-task v2 checkpoints, same training episode across rungs; task + episode pickers */
         (function(){
-          const root = document.getElementById("w4r5-pick"), r = root.parentElement;
+          const root = document.getElementById("w4r6-pick"), r = root.parentElement;
           const selT = root.querySelector(".pk-task"), selS = root.querySelector(".pk-seed");
           const vids = [1, 2, 3, 4, 5].map(k => r.querySelector(".pk-video-" + k)), caps = [1, 2, 3, 4, 5].map(k => r.querySelector(".pk-cap-" + k));
           const C = ["oraclecmd_null", "pointcloud_task_space_recobs", "rgbd_task_space_recobs", "pointcloud_task_space", "rgbd_task_space"];
@@ -1066,13 +1066,13 @@ html{scroll-behavior:smooth}
           root.querySelector(".pk-next").addEventListener("click", () => step(1));
           fillSeeds(); show();
         })();
-        /* weeks 4-5, 6: per-task action policies; same training episode across rungs + the state policy of 5 */
+        /* weeks 4-5, 5: per-task action policies; same training episode across rungs + the state policy of 6 */
         (function(){
-          const root = document.getElementById("w4r6-pick"), r = root.parentElement;
+          const root = document.getElementById("w4r5-pick"), r = root.parentElement;
           const selT = root.querySelector(".pk-task"), selS = root.querySelector(".pk-seed");
           const vids = [1, 2, 3, 4].map(k => r.querySelector(".pk-video-" + k)), caps = [1, 2, 3, 4].map(k => r.querySelector(".pk-cap-" + k));
           const T = [{id:"tight_insertion", label:"Tight insertion"},{id:"beam_assembly_step1", label:"Beam assembly, step 1"},{id:"beam_assembly_step2", label:"Beam assembly, step 2"},{id:"screwing", label:"Screwing"}];
-          /* verdicts per rung: "goals, why it ended, closest approach mm" (rung 4b from section 5's map is re-derived below) */
+          /* verdicts per rung: "goals, why it ended, closest approach mm" (rung 4b from section 6's map is re-derived below) */
           const R = {"beam_assembly_step1":{"5001":["success","1/2, frame_cap, 9","0/2, timeout, 40"],"5024":["success","0/2, frame_cap, 14","0/2, timeout, 30"],"5048":["success","0/2, frame_cap, 31","0/2, timeout, 54"],"5073":["success","0/2, frame_cap, 36","0/2, timeout, 123"],"5099":["success","0/2, frame_cap, 25","0/2, fall, 48"]},"beam_assembly_step2":{"5001":["success","0/2, frame_cap, 93","0/2, timeout, 19"],"5025":["success","0/2, frame_cap, 86","0/2, timeout, 18"],"5050":["success","0/2, frame_cap, 22","0/2, timeout, 14"],"5077":["success","0/2, frame_cap, 31","0/2, timeout, 40"],"5100":["success","0/2, frame_cap, 81","0/2, timeout, 48"]},"screwing":{"5000":["success","0/10, timeout, 55","0/10, fall, 30"],"5025":["success","0/10, timeout, 67","0/10, timeout, 78"],"5049":["success","0/10, timeout, 43","0/10, fall, 17"],"5084":["success","0/10, fall, 41","0/10, fall, 18"],"5111":["success","0/10, timeout, 187","0/10, timeout, 237"]},"tight_insertion":{"5002":["success","0/2, frame_cap, 18","0/2, timeout, 163"],"5030":["success","0/2, frame_cap, 48","0/2, timeout, 82"],"5055":["success","0/2, frame_cap, 153","0/2, timeout, 222"],"5086":["success","0/2, frame_cap, 41","0/2, fall, 50"],"5117":["success","0/2, fall, 29","0/2, fall, 50"]}};
           const R5 = {"beam_assembly_step1":{"5001":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5024":["0/2, frame_cap","success","0/2, timeout","0/2, timeout"],"5048":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5073":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5099":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]},"beam_assembly_step2":{"5001":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5025":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5050":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5077":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5100":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]},"screwing":{"5000":["0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5025":["0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5049":["0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"],"5084":["0/10, frame_cap","0/10, frame_cap","0/10, timeout","0/10, timeout"],"5111":["0/10, timeout","0/10, timeout","0/10, timeout","0/10, timeout"]},"tight_insertion":{"5002":["0/2, fall","0/2, fall","0/2, timeout","0/2, timeout"],"5030":["0/2, frame_cap","0/2, fall","0/2, timeout","0/2, timeout"],"5055":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"],"5086":["0/2, frame_cap","0/2, fall","0/2, timeout","0/2, timeout"],"5117":["0/2, frame_cap","0/2, frame_cap","0/2, timeout","0/2, timeout"]}};
           const END = {frame_cap: "reference held after the recording ended", timeout: "10 s without progress", fall: "part dropped"};
@@ -1205,8 +1205,8 @@ html{scroll-behavior:smooth}
       ["w4-r2", "2 · Why live drifts"],
       ["w4-r3", "3 · Actuation channel"],
       ["w4-r4", "4 · Small-range set"],
-      ["w4-r5", "5 · Per-task checkpoints"],
-      ["w4-r6", "6 · Action policies"],
+      ["w4-r5", "5 · Action policies"],
+      ["w4-r6", "6 · Per-task checkpoints"],
       ["w4-r7", "7 · Fixed-start sets"],
     ["week-3", "Week 3", 1],
       ["w3-r1", "1 · Offline prediction"],
